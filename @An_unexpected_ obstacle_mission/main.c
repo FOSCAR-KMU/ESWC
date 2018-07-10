@@ -537,7 +537,7 @@ int main(int argc, char **argv)
     CameraYServoControl_Write(angle);
 
     SpeedControlOnOff_Write(CONTROL);   // speed controller must be also ON !!!
-    speed = 50; // speed set     --> speed must be set when using position controller
+    speed = 10; // speed set     --> speed must be set when using position controller
     DesireSpeed_Write(speed);
 
     //control on/off
@@ -569,7 +569,7 @@ int main(int argc, char **argv)
     EncoderCounter_Write(posInit);
 
     //position set
-    posDes = 10;
+    posDes = 10000;
     position = posInit+posDes;
     DesireEncoderCount_Write(position);
 
@@ -586,17 +586,24 @@ int main(int argc, char **argv)
 
         if(stop){
 
-          MSG("sex");
-
           speed = 0;
           DesireSpeed_Write(speed);
           sleep(2);
-          break;
+
+          stop = false;
+
         }
+        else{
+
+          speed = 30;
+          DesireSpeed_Write(speed);
+        }
+
+        printf("%d\n", DesireSpeed_Read());
+
 
       }
 
-      speed = 10;
 
 
 
