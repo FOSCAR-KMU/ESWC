@@ -609,7 +609,6 @@ int main(int argc, char **argv)
 
         if(stop){
 
-          MSG("sex");
 
           speed = 0;
           DesireSpeed_Write(speed);
