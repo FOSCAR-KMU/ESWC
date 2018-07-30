@@ -609,7 +609,7 @@ int main(int argc, char **argv)
 
         if(stop){
 
-
+          MSG("asdf");
           speed = 0;
           DesireSpeed_Write(speed);
           sleep(2);

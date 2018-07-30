@@ -3,6 +3,9 @@
 #include <vector>
 #include <stdio.h>
 #include <string.h>
+#include <string>
+#include "util.h"
+
 //#include <sys/time.h>
 
 #include <opencv2/opencv.hpp>
@@ -21,8 +24,8 @@ const Scalar COLOR_BLUE = Scalar(255, 0, 0);
 const Scalar COLOR_RED = Scalar(0, 0, 255);
 const Scalar COLOR_GREEN = Scalar(170, 170, 0);
 
-const Vec3b HSV_YELLOW_LOWER = Vec3b(10, 20, 130);
-const Vec3b HSV_YELLOW_UPPER = Vec3b(30, 140, 255);
+const Vec3b HSV_YELLOW_LOWER = Vec3b(20, 40, 130);
+const Vec3b HSV_YELLOW_UPPER = Vec3b(50, 255, 255);
 
 const Vec3b HSV_RED_LOWER = Vec3b(0, 100, 100);
 const Vec3b HSV_RED_UPPER = Vec3b(10, 255, 255);
@@ -34,13 +37,18 @@ const Vec3b HSV_BLACK_UPPER = Vec3b(180, 255, 50);
 
 const int Unexpected_Obstacle_Threshold = 5000;
 
+int intersectPointX;
+int intersectPointY;
+
 
 bool get_intersectpoint(const Point& AP1, const Point& AP2,	const Point& BP1, const Point& BP2, Point* IP);
 
+void v_roi(Mat& img, Mat& img_ROI, const Point& p1, const Point& p2);
+float get_slope(const Point& p1, const Point& p2);
+
+
 bool hough_left(Mat& img, Mat& srcRGB, Point* p1, Point* p2);
 bool hough_right(Mat& img, Mat& srcRGB, Point* p1, Point* p2);
-
-Point vanishing_point;
 
 
 extern "C" {
@@ -145,14 +153,9 @@ void OpenCV_hough_transform(unsigned char* srcBuf, int iw, int ih, unsigned char
 
     }
 
-
-
-
     cvtColor(edgeImg, edgeImg, CV_GRAY2BGR);
 
-
     resize(edgeImg, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
-
 
 }
 
@@ -176,6 +179,7 @@ bool outbreak(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int 
 
     // originImg_left = srcRGB(Rect(0, srcRGB.rows/2, srcRGB.cols/2, srcRGB.rows/2));
   	// originImg_right = srcRGB(Rect(srcRGB.cols/2, srcRGB.rows/2, srcRGB.cols/2, srcRGB.rows/2));
+
 
 
     Mat circle_image = srcRGB.clone();
@@ -208,9 +212,9 @@ bool outbreak(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int 
 
 
 
-void line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh){
+void line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh, int intersect[]){
 
-  Point p1, p2, p3, p4;
+  Point p1, p2, p3, p4, p5;
 
   bool left_error;
   bool right_error;
@@ -243,7 +247,6 @@ void line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf,
   left_error = hough_left(cannyImg1, leftROI, &p1, &p2);
   right_error = hough_right(cannyImg2, rightROI, &p3, &p4);
 
-  get_intersectpoint(p1, p2, p3, p4, vanishing_point);
 
   line(leftROI, p1, p2, COLOR_BLUE, 3, CV_AA);
   line(rightROI, p3, p4, COLOR_BLUE, 3, CV_AA);
@@ -257,9 +260,17 @@ void line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf,
 
   resize(resRGB, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
 
+  get_intersectpoint(p1, p2, Point(p3.x + 160, p3.y), Point(p4.x + 160, p4.y), &p5);
+
+  intersect[0] = p5.x;
+  intersect[1] = p5.y;
+
+
 
 
 }
+
+
 
 
 /**
@@ -293,6 +304,45 @@ void OpenCV_merge_image(unsigned char* src1, unsigned char* src2, unsigned char*
     memcpy(dst, src1AR32.data, w*h*4);
 }
 
+}
+
+void v_roi(Mat& img, Mat& img_ROI, const Point& p1, const Point& p2) {
+
+
+	float slope = get_slope(p1, p2);
+	float alphaY = 30.f / sqrt(slope*slope + 1);
+	float alphaX = slope * alphaY;
+
+	Point a(p1.x - alphaX, p1.y + alphaY);
+	Point b(p1.x + alphaX, p1.y - alphaY);
+	Point c(p2.x, p2.y);
+
+	vector <Point> Left_Point;
+
+	Left_Point.push_back(a);
+	Left_Point.push_back(b);
+	Left_Point.push_back(c);
+
+	Mat roi(img.rows, img.cols, CV_8U, Scalar(0));
+
+	fillConvexPoly(roi, Left_Point, Scalar(255));
+
+	Mat filteredImg_Left;
+	img.copyTo(filteredImg_Left, roi);
+
+
+	img_ROI = filteredImg_Left.clone();
+
+}
+
+float get_slope(const Point& p1, const Point& p2) {
+
+	float slope;
+
+	if (p2.y - p1.y != 0.0) {
+		slope = ((float)p2.y - (float)p1.y) / ((float)p2.x - (float)p1.x);
+	}
+	return slope;
 }
 
 
@@ -333,7 +383,9 @@ bool hough_left(Mat& img, Mat& srcRGB, Point* p1, Point* p2) {
   int threshold = 40;
 
   for (int i = 10; i > 0; i--){
+
     HoughLines(img, linesL, 1, CV_PI / 180, threshold);
+
 
     int clusterCount = 2;
   		Mat h_points = Mat(linesL.size(), 1, CV_32FC2);
@@ -343,9 +395,11 @@ bool hough_left(Mat& img, Mat& srcRGB, Point* p1, Point* p2) {
   				count++;
   				float rho = linesL[i][0];
   				float theta = linesL[i][1];
+
+          // if(theta >= CV_PI / 2) continue;
+
   				double a = cos(theta), b = sin(theta);
   				double x0 = a * rho, y0 = b * rho;
-  				// cout << "x0, y0 : " << rho << ' ' << theta << endl;
   				h_points.at<Point2f>(i, 0) = Point2f(rho, (float)(theta * 100));
   			}
   			kmeans(h_points, clusterCount, labels,
@@ -426,6 +480,9 @@ bool hough_right(Mat& img, Mat& srcRGB, Point* p1, Point* p2) {
   				count++;
   				float rho = linesR[i][0];
   				float theta = linesR[i][1];
+
+          // if(theta <= CV_PI / 2) continue;
+
   				double a = cos(theta), b = sin(theta);
   				double x0 = a * rho, y0 = b * rho;
   				// cout << "x0, y0 : " << rho << ' ' << theta << endl;
@@ -441,8 +498,6 @@ bool hough_right(Mat& img, Mat& srcRGB, Point* p1, Point* p2) {
   			float theta = (float)mypt1.y / 100;
   			double a = cos(theta), b = sin(theta);
   			double x0 = a * rho, y0 = b * rho;
-
-  			// cout << "pt : " << mypt1.x << ' ' << mypt1.y << endl;
 
   			int _x1 = int(x0 + 1000 * (-b));
   			int _y1 = int(y0 + 1000 * (a));

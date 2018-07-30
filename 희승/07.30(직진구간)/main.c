@@ -51,12 +51,9 @@
 #define DUMP_MSGQ_MSG_TYPE      0x02
 
 volatile bool stop = false;
+volatile int intersectPoint[2] = { 160, 90};
 
-extern Point vanishing_point;
 
-template <typename T> int sgn(T val) {
-    return (T(0) < val) - (val < T(0));
-}
 
 typedef enum {
     DUMP_NONE,
@@ -204,36 +201,14 @@ static void drive(struct display *disp, struct buffer *cambuf)
 
         gettimeofday(&st, NULL);
 
-        line_detector(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H);
+        line_detector(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, intersectPoint);
+
 
         gettimeofday(&et, NULL);
         optime = ((et.tv_sec - st.tv_sec)*1000)+ ((int)et.tv_usec/1000 - (int)st.tv_usec/1000);
         draw_operatingtime(disp, optime);
     }
 }
-
-
-static void calc_initial_VP_proportion()
-{
-    // 초기 조향각 민감도 및 좌우 조향각 계산
-}
-
-static void steering_control()
-{
-    float VPx, VPy;
-    float weight_VPx;
-
-    VPx = (float)(90 - vanishing_point.x) / 90.0f;
-    VPy = (float)(160 - vanishing_point.y) / 160.0f;    
-
-    float steering_angle, offset; // offset 설정해야함
-    steering_angle = 0.5 * (sgn(VPy) + 1) * (VPx * steer_max) * weight_VPx
-                    -0.5 * (sgn(VPy) - 1) * (VPy * steer_max) * weight_VPx
-                    + offset;
-    
-
-}
-
 
 
 
@@ -553,18 +528,18 @@ int main(int argc, char **argv)
         MSG("Failed creating capture thread");
     }
     pthread_detach(tdata.threads[0]);
-
-    ret = pthread_create(&tdata.threads[1], NULL, capture_dump_thread, &tdata);
-    if(ret) {
-        MSG("Failed creating capture dump thread");
-    }
-    pthread_detach(tdata.threads[1]);
-
-    ret = pthread_create(&tdata.threads[2], NULL, input_thread, &tdata);
-    if(ret) {
-        MSG("Failed creating input thread");
-    }
-    pthread_detach(tdata.threads[2]);
+    //
+    // ret = pthread_create(&tdata.threads[1], NULL, capture_dump_thread, &tdata);
+    // if(ret) {
+    //     MSG("Failed creating capture dump thread");
+    // }
+    // pthread_detach(tdata.threads[1]);
+    //
+    // ret = pthread_create(&tdata.threads[2], NULL, input_thread, &tdata);
+    // if(ret) {
+    //     MSG("Failed creating input thread");
+    // }
+    // pthread_detach(tdata.threads[2]);
 /////////////////////////////제어//////////////////////////////////
     unsigned char status;
     short speed, rspeed;
@@ -581,13 +556,13 @@ int main(int argc, char **argv)
     CarControlInit();
 
     angle = 1500;
-    cameraY = 1700;
+    cameraY = 1600;
     SteeringServoControl_Write(angle);
     CameraXServoControl_Write(angle);
     CameraYServoControl_Write(cameraY);
 
     SpeedControlOnOff_Write(CONTROL);   // speed controller must be also ON !!!
-    speed = 0; // speed set     --> speed must be set when using position controller
+    speed = 30; // speed set     --> speed must be set when using position controller
     DesireSpeed_Write(speed);
 
     //control on/off
@@ -632,18 +607,39 @@ int main(int argc, char **argv)
 
     PositionControlOnOff_Write(UNCONTROL);
 
+    //
+    //
+    //
+    // while(1){
+    //   speed = 15; // speed set     --> speed must be set when using position controller
+    //   DesireSpeed_Write(speed);
+    //   sleep(4);
+    //   speed = -15;
+    //   DesireSpeed_Write(speed);
+    //
+    //
+    // }
+
+
+
+
       while(1){
 
-        if(stop){
+        printf("%d : %d\n", intersectPoint[0], intersectPoint[1]);
 
-          MSG("asdf");
+        float steer = 1000 + 3.1 * (320.0 - (float) intersectPoint[0]);
 
+        angle = steer;
 
-          speed = 0;
-          DesireSpeed_Write(speed);
-          sleep(2);
-          break;
-        }
+        SteeringServoControl_Write(angle);
+        //
+        // if(stop){
+        //
+        //   speed = 0;
+        //   DesireSpeed_Write(speed);
+        //   sleep(2);
+        //   break;
+        // }
 
       }
 
