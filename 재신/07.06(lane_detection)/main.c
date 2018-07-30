@@ -58,7 +58,6 @@ template <typename T> int sgn(T val) {
     return (T(0) < val) - (val < T(0));
 }
 
-
 typedef enum {
     DUMP_NONE,
     DUMP_CMD,
@@ -213,6 +212,7 @@ static void drive(struct display *disp, struct buffer *cambuf)
     }
 }
 
+
 static void calc_initial_VP_proportion()
 {
     // 초기 조향각 민감도 및 좌우 조향각 계산
@@ -233,6 +233,7 @@ static void steering_control()
     
 
 }
+
 
 
 
@@ -636,6 +637,7 @@ int main(int argc, char **argv)
         if(stop){
 
           MSG("asdf");
+
 
           speed = 0;
           DesireSpeed_Write(speed);
