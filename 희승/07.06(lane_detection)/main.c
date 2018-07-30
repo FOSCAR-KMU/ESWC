@@ -610,6 +610,11 @@ int main(int argc, char **argv)
         if(stop){
 
           MSG("asdf");
+<<<<<<< HEAD
+
+
+=======
+>>>>>>> 1a1359a1623d8ce7a01008ec33ee20f303baf283
           speed = 0;
           DesireSpeed_Write(speed);
           sleep(2);
