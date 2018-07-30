@@ -243,7 +243,10 @@ void line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf,
   left_error = hough_left(cannyImg1, leftROI, &p1, &p2);
   right_error = hough_right(cannyImg2, rightROI, &p3, &p4);
 
+<<<<<<< HEAD
   get_intersectpoint(p1, p2, p3, p4, vanishing_point);
+=======
+>>>>>>> 4c32e3530eb032d38cbfa500ba4aac1c2d83b157
 
   line(leftROI, p1, p2, COLOR_BLUE, 3, CV_AA);
   line(rightROI, p3, p4, COLOR_BLUE, 3, CV_AA);

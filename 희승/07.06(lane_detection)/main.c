@@ -611,6 +611,7 @@ int main(int argc, char **argv)
 
           MSG("asdf");
 
+
           speed = 0;
           DesireSpeed_Write(speed);
           sleep(2);

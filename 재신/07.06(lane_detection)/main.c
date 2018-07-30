@@ -52,12 +52,15 @@
 
 volatile bool stop = false;
 
+<<<<<<< HEAD
 extern Point vanishing_point;
 
 template <typename T> int sgn(T val) {
     return (T(0) < val) - (val < T(0));
 }
 
+=======
+>>>>>>> 4c32e3530eb032d38cbfa500ba4aac1c2d83b157
 
 typedef enum {
     DUMP_NONE,
@@ -207,12 +210,17 @@ static void drive(struct display *disp, struct buffer *cambuf)
 
         line_detector(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H);
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 4c32e3530eb032d38cbfa500ba4aac1c2d83b157
         gettimeofday(&et, NULL);
         optime = ((et.tv_sec - st.tv_sec)*1000)+ ((int)et.tv_usec/1000 - (int)st.tv_usec/1000);
         draw_operatingtime(disp, optime);
     }
 }
 
+<<<<<<< HEAD
 static void calc_initial_VP_proportion()
 {
     // 초기 조향각 민감도 및 좌우 조향각 계산
@@ -224,16 +232,18 @@ static void steering_control()
     float weight_VPx;
 
     VPx = (float)(90 - vanishing_point.x) / 90.0f;
-    VPy = (float)(160 - vanishing_point.y) / 160.0f;    
+    VPy = (float)(160 - vanishing_point.y) / 160.0f;
 
     float steering_angle, offset; // offset 설정해야함
     steering_angle = 0.5 * (sgn(VPy) + 1) * (VPx * steer_max) * weight_VPx
                     -0.5 * (sgn(VPy) - 1) * (VPy * steer_max) * weight_VPx
                     + offset;
-    
+
 
 }
 
+=======
+>>>>>>> 4c32e3530eb032d38cbfa500ba4aac1c2d83b157
 
 
 /**
