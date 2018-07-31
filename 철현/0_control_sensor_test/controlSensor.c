@@ -191,7 +191,7 @@ void main(void)
     CameraXServoControl_Write(angle);
     CameraYServoControl_Write(angle);
 #endif
-
+*/
 #ifdef LINE_TRACE
     // 4. line trace sensor --------------------------------------------------------
     sensor = LineSensor_Read();        // black:1, white:0
@@ -206,7 +206,7 @@ void main(void)
     printf("\n");
     printf("LineSensor_Read() = %d \n", sensor);
 #endif
-*/
+/*
 #ifdef DISTANCE_SENSOR
     // 5. distance sensor --------------------------------------------------------
     printf("\n\n 4. distance sensor\n");
@@ -228,4 +228,5 @@ void main(void)
         }
     }
 #endif
+*/
 }
