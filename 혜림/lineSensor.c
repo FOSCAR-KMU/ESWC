@@ -35,7 +35,7 @@ void main(void)
     char byte = 0x80;
 
     CarControlInit();
-    
+
 #ifdef LINE_TRACE
     // 4. line trace sensor --------------------------------------------------------
 
@@ -61,4 +61,3 @@ void main(void)
   }
 #endif
 }
-
