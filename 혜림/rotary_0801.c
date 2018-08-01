@@ -59,7 +59,7 @@ void checkAnotherCar()
       speed = 0;
 
     else if(dist_back <= MIN_DIST)
-      speed = 120;                    // 뒤에 차가 존재할 경우 속도 최대 (곡선기준)
+      speed = 100;                    // 뒤에 차가 존재할 경우 속도 최대 (곡선기준)
 
     else if(dist_back >= MIN_DIST && dist_front >= MIN_DIST)
       speed = 50;                     // 앞 뒤에 둘다 차가 존재하지 않을 경우
