@@ -53,7 +53,7 @@ int main()
         std::cout << "YES" << std::endl;
         //flag = -1;
      }
-     else if(rotary_flag == 0) // 차가 지나가기 전 
+     else if(rotary_flag == 0) // 차가 지나가기 전
         std::cout << "NO" << std::endl;
      // imshow("Video",frame);
      if(waitKey(1)==27)
