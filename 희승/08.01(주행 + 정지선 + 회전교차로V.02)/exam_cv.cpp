@@ -23,7 +23,7 @@ const Scalar COLOR_GREEN = Scalar(170, 170, 0);
 const Vec3b HSV_YELLOW_LOWER = Vec3b(20, 40, 130);
 const Vec3b HSV_YELLOW_UPPER = Vec3b(50, 255, 255);
 
-const Vec3b RGB_WHITE_LOWER = Vec3b(100, 100, 210);
+const Vec3b RGB_WHITE_LOWER = Vec3b(100, 100, 180);
 const Vec3b RGB_WHITE_UPPER = Vec3b(255, 255, 255);
 
 const Vec3b HSV_RED_LOWER = Vec3b(0, 100, 100);
