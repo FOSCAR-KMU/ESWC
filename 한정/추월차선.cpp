@@ -80,7 +80,19 @@ void 버드뷰()
     waitKey();
 );
 
-void 장애물없는차선검출(){
+bool 장애물있냐?(Mat img) {
+    Mat yuv_img;
+    cvtColor(img, yuv_img, CV_BGR2YUV);
+    for(int i = 0 ; i < yuv_img.rows ; i++)
+    {
+        for(int j = 0 ; j < yuv_img.cols ; j++)
+        {
+            
+        }
+    }
+}
+
+int 장애물없는차선검출(Mat img){
 
 }
 
