@@ -242,12 +242,14 @@ static void calc_initial_VP_proportion()
 static void steering_control()
 {
     float VPx, VPy;
-    float weight_VPx;
+    float weight_VPx = 1.0f;
 
     VPx = (float)(90 - vanishing_point.x) / 90.0f;
     VPy = (float)(160 - vanishing_point.y) / 160.0f;
 
-    float steering_angle, offset; // offset 설정해야함
+    float steering_angle; // offset 설정해야함
+    float offset = 1500;
+    float steer_max = 250;
     steering_angle = 0.5 * (sgn(VPy) + 1) * (VPx * steer_max) * weight_VPx
                     -0.5 * (sgn(VPy) - 1) * (VPy * steer_max) * weight_VPx
                     + offset;
