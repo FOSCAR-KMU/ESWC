@@ -18,7 +18,27 @@ void Region_Of_Interest(Mat& Img1, Mat& Img2);
 bool GetIntersectPoint(const Point& AP1, const Point& AP2,
                        const Point& BP1, const Point& BP2, Point* IP);
 
+                       const Vec3b HSV_WHITE_LOWER = Vec3b(80, 0, 190);
+                       const Vec3b HSV_WHITE_UPPER = Vec3b(180, 40, 255);
 
+
+
+                       const Vec3b HSV_YELLOW_LOWER = Vec3b(20, 40, 130);
+                       const Vec3b HSV_YELLOW_UPPER = Vec3b(50, 255, 255);
+
+                       const Vec3b RGB_WHITE_LOWER = Vec3b(100, 100, 170);
+                       const Vec3b RGB_WHITE_UPPER = Vec3b(255, 255, 255);
+
+                       const Vec3b HSV_RED_LOWER = Vec3b(0, 100, 100);
+                       const Vec3b HSV_RED_UPPER = Vec3b(10, 255, 255);
+                       const Vec3b HSV_RED_LOWER1 = Vec3b(160, 100, 100);
+                       const Vec3b HSV_RED_UPPER1 = Vec3b(179, 255, 255);
+
+                       const Vec3b HSV_BLACK_LOWER = Vec3b(0, 0, 0);
+                       const Vec3b HSV_BLACK_UPPER = Vec3b(180, 255, 50);
+
+                       const Vec3b YUV_LOWER = Vec3b(10, 110, 120);
+                       const Vec3b YUV_UPPER = Vec3b(70, 130, 140);
 
 int main(){
 
@@ -32,17 +52,9 @@ int main(){
   Mat grayImg1;
   Mat grayImg2;
 
-  Mat blured1;
-  Mat blured2;
+  Mat hsvImg;
+  Mat yuvImg;
 
-  Mat cannyImg1;
-  Mat cannyImg2;
-
-  Mat houghImg1;
-  Mat houghImg2;
-
-  Mat imageROI1;
-  Mat imageROI2;
 
   while(1) {
 
@@ -51,11 +63,19 @@ int main(){
 
     // 흑백화 하기
     cvtColor(originImg1, grayImg1, COLOR_BGR2GRAY);
+    cvtColor(originImg1, hsvImg, COLOR_BGR2HSV);
+    cvtColor(originImg1, yuvImg, COLOR_BGR2YUV);
+
+    inRange(hsvImg, HSV_WHITE_LOWER, HSV_WHITE_UPPER, grayImg2);
 
     // ROI 설정
 
-
+    imshow("ori", originImg1);
     imshow("gray", grayImg1);
+    imshow("hsv", hsvImg);
+    imshow("yuv", yuvImg);
+
+    imshow("binary", grayImg2);
 
 
     if(waitKey(10) == 0){
