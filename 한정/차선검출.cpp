@@ -11,16 +11,51 @@
 using namespace cv;
 using namespace std;
 
-int main(){
-    Mat img = imread("장애물유.JPG");
-    resize(img, img, Size(WIDTH, HEIGHT), 0, 0, CV_INTER_LINEAR);
 
+//1이 위쪽
+Point2f L[2];
+Point2f R[2];
+
+void TopView(Mat &src, Mat &dst){
+    resize(src, src, Size(WIDTH, HEIGHT), 0, 0, CV_INTER_LINEAR);
+
+    cout << src.rows << ' ' << src.cols << endl;
+
+    Point2f src_vertices[4];
+    L[0] = Point(660, 430);
+    L[1] = Point(0, 742);
+    R[0] = Point(870, 444);
+    R[1] = Point(1400, 740);
+
+    float diff0 = R[0].x - L[0].x;
+    float diff1 = R[1].x - L[1].x;
+
+    src_vertices[0] = Point(L[0].x - diff0, R[0].y);
+    src_vertices[1] = Point(R[0].x + diff0, R[0].y);
+    src_vertices[2] = Point(R[1].x + diff1, R[1].y);
+    src_vertices[3] = Point(L[1].x - diff1, R[1].y);
+
+    Point2f dst_vertices[4];
+    dst_vertices[0] = Point(0, 0);
+    dst_vertices[1] = Point(WIDTH, 0);
+    dst_vertices[2] = Point(WIDTH, HEIGHT);
+    dst_vertices[3] = Point(0, HEIGHT);
+
+    warpPerspective(src, dst, getPerspectiveTransform(src_vertices, dst_vertices), dst.size(), INTER_LINEAR, BORDER_CONSTANT);
+}
+
+int main(){
+    Mat img2 = imread("차있는사진.JPG");
+    resize(img2, img2, Size(WIDTH, HEIGHT), 0, 0, CV_INTER_LINEAR);
+
+    Mat img(HEIGHT, WIDTH, CV_8UC3);
+    TopView(img2, img);
     imshow("Original",img);
     Mat gray;
     cvtColor(img,gray, COLOR_BGR2GRAY);
 
     Mat edges;
-    Canny(gray, edges, 250, 500);
+    Canny(gray, edges, 25, 50);
     imshow("Edges",edges);
     vector<cv::Vec2f> lines;
     HoughLines(edges, lines, 1, PI/180,170);

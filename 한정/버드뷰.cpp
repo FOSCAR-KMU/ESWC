@@ -15,16 +15,16 @@ Point2f L[2];
 Point2f R[2];
 
 int main(){
-    Mat src = imread("장애물유.JPG");
+    Mat src = imread("차있는사진.JPG");
     resize(src, src, Size(WIDTH, HEIGHT), 0, 0, CV_INTER_LINEAR);
 
     cout << src.rows << ' ' << src.cols << endl;
 
     Point2f src_vertices[4];
-    L[0] = Point(525, 316);
-    L[1] = Point(80, 540);
-    R[0] = Point(780, 305);
-    R[1] = Point(1330, 540);
+    L[0] = Point(660, 430);
+    L[1] = Point(0, 742);
+    R[0] = Point(870, 444);
+    R[1] = Point(1400, 740);
 
     float diff0 = R[0].x - L[0].x;
     float diff1 = R[1].x - L[1].x;
