@@ -27,15 +27,6 @@
 #define VPE_OUTPUT_W        320
 #define VPE_OUTPUT_H        180
 
-
-// display output & dump  format: NV12, w:320, h:180
-//#define VPE_OUTPUT_IMG_SIZE    (VPE_OUTPUT_W*VPE_OUTPUT_H*3/2) // NV12 : 12bpp
-//#define VPE_OUTPUT_FORMAT       "nv12"
-
-// display output & dump  format: yuyv, w:320, h:180
-//#define VPE_OUTPUT_IMG_SIZE    (VPE_OUTPUT_W*VPE_OUTPUT_H*2)
-//#define VPE_OUTPUT_FORMAT       "yuyv"
-
 #define VPE_OUTPUT_IMG_SIZE    (VPE_OUTPUT_W*VPE_OUTPUT_H*3)
 #define VPE_OUTPUT_FORMAT       "bgr24"
 
@@ -50,24 +41,29 @@
 #define DUMP_MSGQ_KEY           1020
 #define DUMP_MSGQ_MSG_TYPE      0x02
 
-volatile bool stop = false;
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 1a1359a1623d8ce7a01008ec33ee20f303baf283
-extern Point vanishing_point;
+////////////////////////////////////////////////////////////////////////////////////
 
-template <typename T> int sgn(T val) {
-    return (T(0) < val) - (val < T(0));
-}
+#define MIN_DIST 15
 
-<<<<<<< HEAD
-=======
->>>>>>> 4c32e3530eb032d38cbfa500ba4aac1c2d83b157
+volatile int angle = 1500; //조향값
 
-=======
->>>>>>> 1a1359a1623d8ce7a01008ec33ee20f303baf283
+volatile int outbreak_flag = 0; //돌발 표지판 flag
+volatile int stop_line_flag = 0; // 정지선 flag
+
+
+volatile int rotary_flag = 0;
+// 0 : 정지선 진입전
+// 1 : 회전교차로 진입전
+// 2 : 회전교차로 주행중
+
+volatile int outbreak_count = 0; //돌발 표지판 이진화 픽셀값 Count
+volatile int rotary_enter_count = 0; //로타리 진입전 이진화 픽셀값 Count
+
+
+volatile float slope[2] = {};
+
+
 typedef enum {
     DUMP_NONE,
     DUMP_CMD,
@@ -187,14 +183,7 @@ static void outBreakMission(struct display *disp, struct buffer *cambuf)
 
         gettimeofday(&st, NULL);
 
-        if(outbreak(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H)){
-          MSG(" stop ");
-          stop = true;
-        }
-        else{
-          MSG(" start ");
-        }
-
+        outbreak_count = outbreak(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H);
 
         gettimeofday(&et, NULL);
         optime = ((et.tv_sec - st.tv_sec)*1000)+ ((int)et.tv_usec/1000 - (int)st.tv_usec/1000);
@@ -214,62 +203,55 @@ static void drive(struct display *disp, struct buffer *cambuf)
 
         gettimeofday(&st, NULL);
 
-        line_detector(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
+        if(rotary_flag == 2){
+          angle = rotary_line_detector(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H);
+        }
+        else{
 
->>>>>>> 4c32e3530eb032d38cbfa500ba4aac1c2d83b157
-=======
->>>>>>> 1a1359a1623d8ce7a01008ec33ee20f303baf283
+
+          // printf("hi %d\n", stop_line_detector(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H));
+          angle = line_detector(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, slope);
+          if(stop_line_flag == 0 && stop_line_detector(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H)){
+            stop_line_flag = 1;
+          }
+
+          if(rotary_flag == 0 && stop_line_flag == 1 && angle >= 1500){
+            angle = 1100;
+          }
+
+        }
+
+
         gettimeofday(&et, NULL);
         optime = ((et.tv_sec - st.tv_sec)*1000)+ ((int)et.tv_usec/1000 - (int)st.tv_usec/1000);
         draw_operatingtime(disp, optime);
     }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
+//로타리 진입전 영상처리로 차 그림자 확인 함수
 
->>>>>>> 1a1359a1623d8ce7a01008ec33ee20f303baf283
-static void calc_initial_VP_proportion()
+static void rotary_enter(struct display *disp, struct buffer *cambuf)
 {
-    // 초기 조향각 민감도 및 좌우 조향각 계산
+    unsigned char srcbuf[VPE_OUTPUT_W*VPE_OUTPUT_H*3];
+    uint32_t optime;
+    struct timeval st, et;
+
+    unsigned char* cam_pbuf[4];
+    if(get_framebuf(cambuf, cam_pbuf) == 0) {
+        memcpy(srcbuf, cam_pbuf[0], VPE_OUTPUT_W*VPE_OUTPUT_H*3);
+
+        gettimeofday(&st, NULL);
+
+        rotary_enter_count = enter_the_rotary(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H);
+
+        gettimeofday(&et, NULL);
+        optime = ((et.tv_sec - st.tv_sec)*1000)+ ((int)et.tv_usec/1000 - (int)st.tv_usec/1000);
+        draw_operatingtime(disp, optime);
+    }
 }
 
-static void steering_control()
-{
-    float VPx, VPy;
-    float weight_VPx = 1.0f;
 
-    VPx = (float)(90 - vanishing_point.x) / 90.0f;
-    VPy = (float)(160 - vanishing_point.y) / 160.0f;
-
-    float steering_angle; // offset 설정해야함
-    float offset = 1500;
-    float steer_max = 250;
-    steering_angle = 0.5 * (sgn(VPy) + 1) * (VPx * steer_max) * weight_VPx
-                    -0.5 * (sgn(VPy) - 1) * (VPy * steer_max) * weight_VPx
-                    + offset;
-
-
-}
-
-<<<<<<< HEAD
-=======
->>>>>>> 4c32e3530eb032d38cbfa500ba4aac1c2d83b157
-=======
-
->>>>>>> 1a1359a1623d8ce7a01008ec33ee20f303baf283
-
-
-/**
-  * @brief  Camera capture, capture image covert by VPE and display after sobel edge
-  * @param  arg: pointer to parameter of thr_data
-  * @retval none
-  */
 void * capture_thread(void *arg)
 {
     struct thr_data *data = (struct thr_data *)arg;
@@ -324,9 +306,23 @@ void * capture_thread(void *arg)
         index = vpe_output_dqbuf(vpe);
         capt = vpe->disp_bufs[index];
 
-        // outBreakMission(vpe->disp, capt);
-        drive(vpe->disp, capt);
 
+        //////////////////////////미션 실행 함수들////////////////////////////
+
+
+        if(rotary_flag == 1){
+          rotary_enter(vpe->disp, capt);
+        }
+        else{
+
+          if(outbreak_flag == 0){
+            outBreakMission(vpe->disp, capt);
+          }
+          drive(vpe->disp, capt);
+        }
+
+
+        ///////////////////////////////////////////////////////////////////
         if (disp_post_vid_buffer(vpe->disp, capt, 0, 0, vpe->dst.width, vpe->dst.height)) {
             ERROR("Post buffer failed");
             return NULL;
@@ -502,199 +498,308 @@ void signal_handler(int sig)
     }
 }
 
+
+int data_transform(int x, int in_min, int in_max, int out_min, int out_max)
+{
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
+void checkAnotherCar()
+{
+
+  short speed;
+  int i;
+  for(i = 0; i < 10; ++i)
+  {
+    int dist_front = DistanceSensor(1);
+    int dist_back = DistanceSensor(4);
+    int volt_front = data_transform(dist_front, 0 , 4095 , 0 , 5000);
+    int volt_back = data_transform(dist_back, 0, 4095, 0, 5000);
+
+    //printf("channel = %d, distance = 0x%04X(%d) \n", channel, data, data);
+    dist_front = (27.61 / (volt_front - 0.1696))*1000;
+    dist_back = (27.61 / (volt_back - 0.1696)) *1000;
+    printf("front : %d cm , back : %d cm \n", dist_front, dist_back);
+
+    // drive condition
+    SpeedControlOnOff_Write(CONTROL);   // speed controller must be also ON !!!
+    if(dist_front <= MIN_DIST)        //  앞에 차가 존재할 경우 멈춤
+      speed = 0;
+
+    else if(dist_back <= MIN_DIST)
+      speed = 100;                    // 뒤에 차가 존재할 경우 속도 최대 (곡선기준)
+
+    else if(dist_back >= MIN_DIST && dist_front >= MIN_DIST)
+      speed = 50;                     // 앞 뒤에 둘다 차가 존재하지 않을 경우
+
+    DesireSpeed_Write(speed);
+  }
+
+}
+
+
+
 int main(int argc, char **argv)
 {
-    struct v4l2 *v4l2;
-    struct vpe *vpe;
-    struct thr_data tdata;
-    int disp_argc = 3;
-    char* disp_argv[] = {"dummy", "-s", "4:480x272", "\0"}; // ���� ���� ���� Ȯ�� �� ó��..
-    int ret = 0;
+  struct v4l2 *v4l2;
+  struct vpe *vpe;
+  struct thr_data tdata;
+  int disp_argc = 3;
+  char* disp_argv[] = {"dummy", "-s", "4:480x272", "\0"}; // ���� ���� ���� Ȯ�� �� ó��..
+  int ret = 0;
 
-    printf("-- 6_camera_opencv_disp example Start --\n");
 
-    tdata.dump_state = DUMP_NONE;
-    memset(tdata.dump_img_data, 0, sizeof(tdata.dump_img_data));
+  tdata.dump_state = DUMP_NONE;
+  memset(tdata.dump_img_data, 0, sizeof(tdata.dump_img_data));
 
-    // open vpe
-    vpe = vpe_open();
-    if(!vpe) {
-        return 1;
+  // open vpe
+  vpe = vpe_open();
+  if(!vpe) {
+    return 1;
+  }
+
+  // vpe input (v4l cameradata)
+  vpe->src.width  = CAPTURE_IMG_W;
+  vpe->src.height = CAPTURE_IMG_H;
+  describeFormat(CAPTURE_IMG_FORMAT, &vpe->src);
+
+  // vpe output (disp data)
+  vpe->dst.width  = VPE_OUTPUT_W;
+  vpe->dst.height = VPE_OUTPUT_H;
+  describeFormat (VPE_OUTPUT_FORMAT, &vpe->dst);
+
+  vpe->disp = disp_open(disp_argc, disp_argv);
+  if (!vpe->disp) {
+    ERROR("disp open error!");
+    vpe_close(vpe);
+    return 1;
+  }
+
+  set_z_order(vpe->disp, vpe->disp->overlay_p.id);
+  set_global_alpha(vpe->disp, vpe->disp->overlay_p.id);
+  set_pre_multiplied_alpha(vpe->disp, vpe->disp->overlay_p.id);
+  alloc_overlay_plane(vpe->disp, OVERLAY_DISP_FORCC, 0, 0, OVERLAY_DISP_W, OVERLAY_DISP_H);
+
+  //vpe->deint = 0;
+  vpe->translen = 1;
+
+  MSG ("Input(Camera) = %d x %d (%.4s)\nOutput(LCD) = %d x %d (%.4s)",
+  vpe->src.width, vpe->src.height, (char*)&vpe->src.fourcc,
+  vpe->dst.width, vpe->dst.height, (char*)&vpe->dst.fourcc);
+
+  if (    vpe->src.height < 0 || vpe->src.width < 0 || vpe->src.fourcc < 0 || \
+    vpe->dst.height < 0 || vpe->dst.width < 0 || vpe->dst.fourcc < 0) {
+    ERROR("Invalid parameters\n");
+  }
+
+  v4l2 = v4l2_open(vpe->src.fourcc, vpe->src.width, vpe->src.height);
+  if (!v4l2) {
+    ERROR("v4l2 open error!");
+    disp_close(vpe->disp);
+    vpe_close(vpe);
+    return 1;
+  }
+
+  tdata.disp = vpe->disp;
+  tdata.v4l2 = v4l2;
+  tdata.vpe = vpe;
+  tdata.bfull_screen = true;
+  tdata.bstream_start = false;
+
+  if(-1 == (tdata.msgq_id = msgget((key_t)DUMP_MSGQ_KEY, IPC_CREAT | 0666))) {
+    fprintf(stderr, "%s msg create fail!!!\n", __func__);
+    return -1;
+  }
+
+  pexam_data = &tdata;
+
+  ret = pthread_create(&tdata.threads[0], NULL, capture_thread, &tdata);
+  if(ret) {
+    MSG("Failed creating capture thread");
+  }
+  pthread_detach(tdata.threads[0]);
+
+  //
+  // ret = pthread_create(&tdata.threads[1], NULL, capture_dump_thread, &tdata);
+  // if(ret) {
+  //     MSG("Failed creating capture dump thread");
+  // }
+  // pthread_detach(tdata.threads[1]);
+  //
+  // ret = pthread_create(&tdata.threads[2], NULL, input_thread, &tdata);
+  // if(ret) {
+  //     MSG("Failed creating input thread");
+  // }
+  // pthread_detach(tdata.threads[2]);
+
+
+////////////////////////////////////////////////////////////////////////////////
+  unsigned char status;
+  short speed, rspeed;
+  unsigned char gain;
+  int position, posInit, posDes, posRead;
+  short cameraY;
+  int channel;
+  int data;
+  char sensor;
+  int tol;
+  int i, j;
+  char byte = 0x80;
+
+
+  CarControlInit();
+
+  cameraY = 1630;
+  SteeringServoControl_Write(angle);
+  CameraXServoControl_Write(angle);
+  CameraYServoControl_Write(cameraY);
+
+  SpeedControlOnOff_Write(CONTROL);   // speed controller must be also ON !!!
+  speed = 50; // speed set     --> speed must be set when using position controller
+  DesireSpeed_Write(speed);
+
+  //control on/off
+  status = PositionControlOnOff_Read();
+  printf("PositionControlOnOff_Read() = %d\n", status);
+  PositionControlOnOff_Write(CONTROL);
+
+  //speed controller gain set(PID제어)
+  //P-gain
+  gain = SpeedPIDProportional_Read();        // default value = 10, range : 1~50
+  printf("SpeedPIDProportional_Read() = %d \n", gain);
+  gain = 20;
+  SpeedPIDProportional_Write(gain);
+
+  //I-gain
+  gain = SpeedPIDIntegral_Read();        // default value = 10, range : 1~50
+  printf("SpeedPIDIntegral_Read() = %d \n", gain);
+  gain = 20;
+  SpeedPIDIntegral_Write(gain);
+
+  //D-gain
+  gain = SpeedPIDDifferential_Read();        // default value = 10, range : 1~50
+  printf("SpeedPIDDefferential_Read() = %d \n", gain);
+  gain = 20;
+  SpeedPIDDifferential_Write(gain);
+
+  PositionControlOnOff_Write(UNCONTROL);
+
+  const int max_outbreak_thrshold = 3000;
+  const int min_outbreak_thrshold = 50;
+
+  int outbreak_state_flag = 0;
+  // 0 : 돌발 표지판 인식전
+  // 1 : 돌발 표지판 최초 인식
+
+
+////////////////////////////회전교차로 변수////////////////////////////////////////
+
+  const int max_rotary_threshold = 300;
+  const int min_rotary_threshold = 40;
+
+  int rotary_state_flag = 0;
+  // 0 : 차가 지나가는 도중
+  // 1 : 차가 완전히 지나갔을 경우
+////////////////////////////////////////////////////////////////////////////////
+
+
+
+  while(1){
+
+    if(outbreak_flag == 0){
+
+      printf("red pixel count : %d\n", outbreak_count);
+
+      //돌발 장애물 미션 : 최초 인식
+      if(outbreak_count > max_outbreak_thrshold && outbreak_state_flag == 0){
+        outbreak_state_flag = 1;
+        speed = 0;
+        DesireSpeed_Write(speed);
+      }
+      //돌발 장애물 미션 : 돌발 표지판이 다시 올라간 후
+      else if(outbreak_count < min_outbreak_thrshold && outbreak_state_flag == 1){
+        printf("restart!!!");
+        outbreak_flag = 1;
+        speed = 50;
+        DesireSpeed_Write(speed);
+      }
     }
-    // vpe input (v4l cameradata)
-    vpe->src.width  = CAPTURE_IMG_W;
-    vpe->src.height = CAPTURE_IMG_H;
-    describeFormat(CAPTURE_IMG_FORMAT, &vpe->src);
+    //회전 교차로 미션 : 정지선 인식 = 로타리 시작전
+    else if(rotary_flag == 0){
 
-    // vpe output (disp data)
-    vpe->dst.width  = VPE_OUTPUT_W;
-    vpe->dst.height = VPE_OUTPUT_H;
-    describeFormat (VPE_OUTPUT_FORMAT, &vpe->dst);
+      int flag = 0;
+      sensor = LineSensor_Read();   // black:1, white:0
+      printf("LineSensor_Read() = ");
 
-    vpe->disp = disp_open(disp_argc, disp_argv);
-    if (!vpe->disp) {
-        ERROR("disp open error!");
-        vpe_close(vpe);
-        return 1;
-    }
-
-    set_z_order(vpe->disp, vpe->disp->overlay_p.id);
-    set_global_alpha(vpe->disp, vpe->disp->overlay_p.id);
-    set_pre_multiplied_alpha(vpe->disp, vpe->disp->overlay_p.id);
-    alloc_overlay_plane(vpe->disp, OVERLAY_DISP_FORCC, 0, 0, OVERLAY_DISP_W, OVERLAY_DISP_H);
-
-    //vpe->deint = 0;
-    vpe->translen = 1;
-
-    MSG ("Input(Camera) = %d x %d (%.4s)\nOutput(LCD) = %d x %d (%.4s)",
-        vpe->src.width, vpe->src.height, (char*)&vpe->src.fourcc,
-        vpe->dst.width, vpe->dst.height, (char*)&vpe->dst.fourcc);
-
-    if (    vpe->src.height < 0 || vpe->src.width < 0 || vpe->src.fourcc < 0 || \
-        vpe->dst.height < 0 || vpe->dst.width < 0 || vpe->dst.fourcc < 0) {
-        ERROR("Invalid parameters\n");
-    }
-
-    v4l2 = v4l2_open(vpe->src.fourcc, vpe->src.width, vpe->src.height);
-    if (!v4l2) {
-        ERROR("v4l2 open error!");
-        disp_close(vpe->disp);
-        vpe_close(vpe);
-        return 1;
-    }
-
-    tdata.disp = vpe->disp;
-    tdata.v4l2 = v4l2;
-    tdata.vpe = vpe;
-    tdata.bfull_screen = true;
-    tdata.bstream_start = false;
-
-    if(-1 == (tdata.msgq_id = msgget((key_t)DUMP_MSGQ_KEY, IPC_CREAT | 0666))) {
-        fprintf(stderr, "%s msg create fail!!!\n", __func__);
-        return -1;
-    }
-
-    pexam_data = &tdata;
-
-    ret = pthread_create(&tdata.threads[0], NULL, capture_thread, &tdata);
-    if(ret) {
-        MSG("Failed creating capture thread");
-    }
-    pthread_detach(tdata.threads[0]);
-
-    ret = pthread_create(&tdata.threads[1], NULL, capture_dump_thread, &tdata);
-    if(ret) {
-        MSG("Failed creating capture dump thread");
-    }
-    pthread_detach(tdata.threads[1]);
-
-    ret = pthread_create(&tdata.threads[2], NULL, input_thread, &tdata);
-    if(ret) {
-        MSG("Failed creating input thread");
-    }
-    pthread_detach(tdata.threads[2]);
-/////////////////////////////제어//////////////////////////////////
-    unsigned char status;
-    short speed, rspeed;
-    unsigned char gain;
-    int position, posInit, posDes, posRead;
-    short angle, cameraY;
-    int channel;
-    int data;
-    char sensor;
-    int i, j;
-    int tol;
-    char byte = 0x80;
-
-    CarControlInit();
-
-    angle = 1500;
-    cameraY = 1700;
-    SteeringServoControl_Write(angle);
-    CameraXServoControl_Write(angle);
-    CameraYServoControl_Write(cameraY);
-
-    SpeedControlOnOff_Write(CONTROL);   // speed controller must be also ON !!!
-    speed = 0; // speed set     --> speed must be set when using position controller
-    DesireSpeed_Write(speed);
-
-    //control on/off
-    status = PositionControlOnOff_Read();
-    printf("PositionControlOnOff_Read() = %d\n", status);
-    PositionControlOnOff_Write(CONTROL);
-
-    //speed controller gain set
-    //P-gain
-    gain = SpeedPIDProportional_Read();        // default value = 10, range : 1~50
-    printf("SpeedPIDProportional_Read() = %d \n", gain);
-    gain = 20;
-    SpeedPIDProportional_Write(gain);
-
-    //I-gain
-    gain = SpeedPIDIntegral_Read();        // default value = 10, range : 1~50
-    printf("SpeedPIDIntegral_Read() = %d \n", gain);
-    gain = 20;
-    SpeedPIDIntegral_Write(gain);
-
-    //D-gain
-    gain = SpeedPIDDifferential_Read();        // default value = 10, range : 1~50
-    printf("SpeedPIDDefferential_Read() = %d \n", gain);
-    gain = 20;
-    SpeedPIDDifferential_Write(gain);
-
-    //position write
-    posInit = 0;  //initialize
-    EncoderCounter_Write(posInit);
-
-    //position set
-    posDes = 10;
-    position = posInit+posDes;
-    DesireEncoderCount_Write(position);
-
-
-    //jobs to be done beforehand;
-
-    // while(1){
-
-
-
-    PositionControlOnOff_Write(UNCONTROL);
-
-      while(1){
-
-        if(stop){
-
-          MSG("asdf");
-<<<<<<< HEAD
-=======
-
->>>>>>> 1a1359a1623d8ce7a01008ec33ee20f303baf283
-
-          speed = 0;
-          DesireSpeed_Write(speed);
-          sleep(2);
-          break;
+      for(i = 0; i < 8; i++){
+        if((i % 4) ==0) printf(" ");
+        if((sensor & byte)) printf("1");
+        else{
+          printf("0");
+          if(i != 0) flag++;
         }
+        sensor = sensor << 1;
+      }
+
+      printf("\n");
+      printf("flag : %d\n", flag);
+
+      if(flag >= 3){
+        printf("LineSensor_Read() = STOP! \n");
+        speed = 0;
+        DesireSpeed_Write(speed);
+
+        rotary_flag = 1;
+
+      }
+    }
+    //회전 교차로 미션 : 정지선 인식 후
+    else if(rotary_flag == 1){
+
+      printf("%d\n", rotary_enter_count);
+
+      //회전교차로 미션 : 차가 지나가는 중
+      if(rotary_enter_count > max_rotary_threshold && rotary_state_flag == 0){
+        rotary_state_flag = 1;
+      }
+      //회전교차로 미션 : 차가 다 지나간 후
+      else if(rotary_enter_count < min_rotary_threshold && rotary_state_flag == 1){
+        printf("rotaty_start!!!");
+        rotary_flag = 2;
+        speed = 50;
+        DesireSpeed_Write(speed);
+      }
+      //회전교차로 미션 : 지나가는 중
+      else if(rotary_state_flag == 0){
+        printf("rotary_wait!!!\n" );
+
+        SteeringServoControl_Write(1500);
 
       }
 
-      speed = 10;
-
-
-
-
-    // }
-
-
-
-    /* register signal handler for <CTRL>+C in order to clean up */
-    if(signal(SIGINT, signal_handler) == SIG_ERR) {
-        MSG("could not register signal handler");
-        closelog();
-        exit(EXIT_FAILURE);
+    }
+    //회전 교차로 미션 : 회전 교차로 진행중
+    else if(rotary_flag == 2){
+      checkAnotherCar();
     }
 
-    pause();
+    printf("steer : %d\n", angle);
 
-    return ret;
+    SteeringServoControl_Write(angle);
+
+  }
+
+
+
+
+/* register signal handler for <CTRL>+C in order to clean up */
+  if(signal(SIGINT, signal_handler) == SIG_ERR) {
+    MSG("could not register signal handler");
+    closelog();
+    exit(EXIT_FAILURE);
+  }
+
+  pause();
+
+  return ret;
 }

@@ -243,6 +243,7 @@ void line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf,
   left_error = hough_left(cannyImg1, leftROI, &p1, &p2);
   right_error = hough_right(cannyImg2, rightROI, &p3, &p4);
 
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
   get_intersectpoint(p1, p2, p3, p4, vanishing_point);
@@ -251,6 +252,9 @@ void line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf,
 =======
   get_intersectpoint(p1, p2, p3, p4, vanishing_point);
 >>>>>>> 1a1359a1623d8ce7a01008ec33ee20f303baf283
+=======
+  get_intersectpoint(p1, p2, p3, p4, &vanishing_point);
+>>>>>>> Stashed changes
 
   line(leftROI, p1, p2, COLOR_BLUE, 3, CV_AA);
   line(rightROI, p3, p4, COLOR_BLUE, 3, CV_AA);
@@ -301,10 +305,6 @@ void OpenCV_merge_image(unsigned char* src1, unsigned char* src2, unsigned char*
 }
 
 }
-
-
-
-
 
 bool get_intersectpoint(const Point& AP1, const Point& AP2,
 	const Point& BP1, const Point& BP2, Point* IP)
