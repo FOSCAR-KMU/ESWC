@@ -52,7 +52,22 @@
 
 volatile bool stop = false;
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 1a1359a1623d8ce7a01008ec33ee20f303baf283
+extern Point vanishing_point;
 
+template <typename T> int sgn(T val) {
+    return (T(0) < val) - (val < T(0));
+}
+
+<<<<<<< HEAD
+=======
+>>>>>>> 4c32e3530eb032d38cbfa500ba4aac1c2d83b157
+
+=======
+>>>>>>> 1a1359a1623d8ce7a01008ec33ee20f303baf283
 typedef enum {
     DUMP_NONE,
     DUMP_CMD,
@@ -201,13 +216,53 @@ static void drive(struct display *disp, struct buffer *cambuf)
 
         line_detector(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H);
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
 
+>>>>>>> 4c32e3530eb032d38cbfa500ba4aac1c2d83b157
+=======
+>>>>>>> 1a1359a1623d8ce7a01008ec33ee20f303baf283
         gettimeofday(&et, NULL);
         optime = ((et.tv_sec - st.tv_sec)*1000)+ ((int)et.tv_usec/1000 - (int)st.tv_usec/1000);
         draw_operatingtime(disp, optime);
     }
 }
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+
+>>>>>>> 1a1359a1623d8ce7a01008ec33ee20f303baf283
+static void calc_initial_VP_proportion()
+{
+    // 초기 조향각 민감도 및 좌우 조향각 계산
+}
+
+static void steering_control()
+{
+    float VPx, VPy;
+    float weight_VPx = 1.0f;
+
+    VPx = (float)(90 - vanishing_point.x) / 90.0f;
+    VPy = (float)(160 - vanishing_point.y) / 160.0f;
+
+    float steering_angle; // offset 설정해야함
+    float offset = 1500;
+    float steer_max = 250;
+    steering_angle = 0.5 * (sgn(VPy) + 1) * (VPx * steer_max) * weight_VPx
+                    -0.5 * (sgn(VPy) - 1) * (VPy * steer_max) * weight_VPx
+                    + offset;
+
+
+}
+
+<<<<<<< HEAD
+=======
+>>>>>>> 4c32e3530eb032d38cbfa500ba4aac1c2d83b157
+=======
+
+>>>>>>> 1a1359a1623d8ce7a01008ec33ee20f303baf283
 
 
 /**
@@ -609,6 +664,11 @@ int main(int argc, char **argv)
 
         if(stop){
 
+          MSG("asdf");
+<<<<<<< HEAD
+=======
+
+>>>>>>> 1a1359a1623d8ce7a01008ec33ee20f303baf283
 
           speed = 0;
           DesireSpeed_Write(speed);
