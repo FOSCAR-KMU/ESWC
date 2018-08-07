@@ -1,6 +1,7 @@
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include <string>
+#include <algorithm>
 
 #define HEIGHT 750
 #define WIDTH 1334
@@ -22,8 +23,8 @@ Point2f R[2];
 int main(int argc, char *argv[]){
     if(argc != 9)
         return -1;
-    VideoCapture capture(0);
-    Mat src;// = imread("차있는사진.JPG");
+    //VideoCapture capture(0);
+    Mat src = imread("차있는사진.JPG");
     int cases = 10;
     int accumulate[3] = {0,};
     
@@ -38,7 +39,7 @@ int main(int argc, char *argv[]){
     
     while(cases--)
     {
-        capture >> src;
+        //capture >> src;
         resize(src, src, Size(WIDTH, HEIGHT), 0, 0, CV_INTER_LINEAR);
         //cout << src.rows << ' ' << src.cols << endl;
         Point2f src_vertices[4];
@@ -80,13 +81,5 @@ int main(int argc, char *argv[]){
         //if(cvWaitKey(33) == 27) break;
     }
     //가운데
-    if(accumulate[1] > THRESHOLD)
-        return 2;
-    //오른쪽
-    if(accumulate[2] > THRESHOLD)
-        return 3;
-    //왼쪽
-    if(accumulate[0] > THRESHOLD)
-        return 1;
-    return 0;
+    return min(min(accumulate[0], accumulate[1]), accumulate[2]) + 1;
 }
