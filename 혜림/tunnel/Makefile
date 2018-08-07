@@ -6,6 +6,7 @@ ARCH=arm
 CC=$(CROSS_COMPILE)gcc
 CXX=$(CROSS_COMPILE)g++
 
+
 INC += -I protocol
 INC += -I$(ROOTFS)/include
 INC += -I$(ROOTFS)/usr/include
@@ -19,15 +20,15 @@ CFLAGS := -O1 -g -Wall -fPIC -mfloat-abi=hard -mfpu=neon -Wl,-rpath,$(ROOTFS)/li
 CXXFLAGS = -Wall -ansi -g -fPIC -mfloat-abi=hard -mfpu=neon $(INC) -I$(ROOTFS)/include/c++/4.7.3/
 
 LDFLAGS = -lm -lpthread -L$(LIBDIR) -lrt -ldrm -lmtdev -ldrm_omap -lstdc++ -lopencv_core -lopencv_highgui -lopencv_imgproc -lopencv_objdetect
-TARGET = camera_opencv_disp
+TARGET = 6_camera_opencv_disp
 
 all: $(TARGET)
 
 clean:
 	rm -f *.a *.o $(TARGET) *.lo
 
-$(TARGET): tunnel_0807.c v4l2.lo display-kms.lo util.lo vpe-common.lo input_cmd.lo drawing.lo exam_cv.lo
-	$(CC) $(CFLAGS) -o $@ tunnel_0807.c v4l2.lo display-kms.lo util.lo vpe-common.lo input_cmd.lo drawing.lo exam_cv.lo $(LDFLAGS)
+$(TARGET): 0807.c car_lib.c v4l2.lo display-kms.lo util.lo vpe-common.lo input_cmd.lo drawing.lo exam_cv.lo
+	$(CC) $(CFLAGS) -o $@ 0807.c car_lib.c v4l2.lo display-kms.lo util.lo vpe-common.lo input_cmd.lo drawing.lo exam_cv.lo $(LDFLAGS)
 
 v4l2.lo: v4l2.c v4l2.h
 	$(CC) -c $(CFLAGS) -o $@ v4l2.c
@@ -43,6 +44,9 @@ vpe-common.lo: vpe-common.c vpe-common.h
 
 drawing.lo: drawing.c drawing.h font_8x8.h
 	$(CC) -c $(CFLAGS) -o $@ drawing.c
+
+# car_lib.lo: car_lib.c car_lib.h
+# 	$(CC) -c $(CFLAGS) -o $@ car_lib.c
 
 input_cmd.lo: input_cmd.cpp input_cmd.h
 	$(CXX) -c $(CXXFLAGS) -o $@ input_cmd.cpp

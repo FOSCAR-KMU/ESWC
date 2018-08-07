@@ -1,4 +1,4 @@
-#include <iostream>
+##include <iostream>
 #include <stdio.h>
 #include <string.h>
 //#include <sys/time.h>
@@ -10,6 +10,41 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/objdetect/objdetect.hpp>
 using namespace cv;
+
+/*******************************************************************************
+ *  INCLUDE FILES
+ *******************************************************************************
+ */
+#include <stdio.h>
+#include "car_lib.h"
+
+/*******************************************************************************
+ *  Defines
+ *******************************************************************************
+ */
+#define LIGHT_BEEP       // to test light and beep
+#define POSITION_CONTROL  // to test postion control
+#define SPEED_CONTROL     // to test speed control
+#define SERVO_CONTROL     // to test servo control(steering & camera position)
+#define LINE_TRACE              // to test line trace sensor
+#define DISTANCE_SENSOR     // to test distance sensor
+
+/*******************************************************************************
+ *  Functions
+ *******************************************************************************
+ */
+unsigned char status;
+short speed;
+unsigned char gain;
+int position, posInit, posDes, posRead;
+short angle;
+int channel;
+int data;
+char sensor;
+int i, j;
+int tol;
+char byte = 0x80;
+
 
 int isTunnel(Mat origin)
 {
@@ -50,6 +85,40 @@ int isTunnel(Mat origin)
 //     }
 //   return false;
 // }
+
+
+void tunnelRun()
+{
+  int channel_left = 6, channel_right = 2;
+  int data_left, data_right;
+  data_left = DistanceSensor(channel_left);
+  data_right = DistanceSensor(channel_right);
+
+  data_left = data_transform(data_left, 0, 4005, 0, 5000);
+  data_right = data_transform(data_right, 0, 4095, 0, 5000);
+
+  // printf("channel = %d, distance = 0x%04X(%d) \n", channel, data, data);
+  data_left = (27.61 / (data_left - 0.1696))*1000;
+  data_right = (27.61 / (data_right - 0.1696))*1000;
+
+  printf("left = %d , right = %d", data_left, data_right);
+
+  angle = SteeringServoControl_Read();
+  printf("SteeringServoControl_Read() = %d\n", angle);    //default = 1500, 0x5dc
+
+  if(data_left < data_right) // right steering
+  {
+    angle -= 50;
+  }
+
+  else if(data_left > data_right) // left steering
+  {
+    angle += 50;
+  }
+
+  SteeringServoControl_Write(angle);
+}
+
 
 int main()
 {
