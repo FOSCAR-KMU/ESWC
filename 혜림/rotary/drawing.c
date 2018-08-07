@@ -132,7 +132,7 @@ PixelFormat draw_get_pixel_foramt(int fourcc)
   * @param  pFrame: pointer to parameter of FrameBuffer structure
                  px : x position of the pixel
                  py : y position of the pixel
-                 color : color format(PixelFormat) of the pixel. 
+                 color : color format(PixelFormat) of the pixel.
   * @retval The enum value of the PixelFormat
   */
 void drawPixel(FrameBuffer* pFrame, uint32_t px, uint32_t py, uint32_t color)
@@ -217,7 +217,7 @@ void drawPixel(FrameBuffer* pFrame, uint32_t px, uint32_t py, uint32_t color)
                  starty : start position of y axis for the rectangle
                  w : width of the rectangle
                  h : height of the rectangle
-                 color : color format(PixelFormat) of the rectangle. 
+                 color : color format(PixelFormat) of the rectangle.
   * @retval none
   */
 void drawRect(FrameBuffer* pFrame, uint32_t startx, uint32_t starty, uint32_t w, uint32_t h, uint32_t color)
@@ -261,7 +261,7 @@ void drawRect(FrameBuffer* pFrame, uint32_t startx, uint32_t starty, uint32_t w,
                  y1 : start position of y axis for the line
                  x2 : end position of x axis for the line
                  y2 : end position of y axis for the line
-                 color : color format(PixelFormat) of the line. 
+                 color : color format(PixelFormat) of the line.
   * @retval none
   */
 void drawLine(FrameBuffer* pFrame, uint32_t x1, uint32_t y1, uint32_t x2, uint32_t y2, uint32_t color)
@@ -336,7 +336,7 @@ void drawLine(FrameBuffer* pFrame, uint32_t x1, uint32_t y1, uint32_t x2, uint32
                  startx : start position of y axis for the character
                  starty : start position of x axis for the character
                  size : font size (This is not used. Fixed to 8x8)
-                 color : color format(PixelFormat) of the character. 
+                 color : color format(PixelFormat) of the character.
   * @retval none
   */
 void drawChar(FrameBuffer* pFrame, char c, uint32_t startx, uint32_t starty, uint32_t size, uint32_t color)
@@ -379,14 +379,14 @@ void drawChar(FrameBuffer* pFrame, char c, uint32_t startx, uint32_t starty, uin
                  startx : start position of y axis for the string
                  starty : start position of x axis for the string
                  size : font size (This is not used. Fixed to 8x8)
-                 color : color format(PixelFormat) of the character. 
+                 color : color format(PixelFormat) of the character.
   * @retval none
   */
 void drawString(FrameBuffer* pFrame, char* str, uint32_t startx, uint32_t starty, uint32_t size, uint32_t color)
 {
     uint32_t i;
     uint32_t len;
-    
+
     len = strlen(str);
 
     DBGLOG("[%s] startx:%d starty:%d, stride:%d, str_len : %d", __func__, startx, starty, pFrame->stride, len);
@@ -400,4 +400,3 @@ void drawString(FrameBuffer* pFrame, char* str, uint32_t startx, uint32_t starty
     for(i = 0; i < len; i++)
         drawChar(pFrame, str[i], (startx + 8 * i), starty, size, color);
 }
-
