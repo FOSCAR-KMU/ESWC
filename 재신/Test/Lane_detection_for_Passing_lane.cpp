@@ -84,7 +84,6 @@ int main(){
 
     Mat bin;
     threshold(gray, bin, 150, 255, THRESH_BINARY);    
-
     imshow("Bin", bin);
 
     Mat edges;
@@ -109,7 +108,7 @@ int main(){
             pt1 = Point(rho/cos(theta), 0); // 첫 행에서 해당 선의 교차점   
             pt2 = Point((rho-result.rows*sin(theta))/cos(theta), result.rows);
             // 마지막 행에서 해당 선의 교차점
-            cv::line(img, pt1, pt2, cv::Scalar(255), 1); // 하얀 선으로 그리기
+            cv::line(roi, pt1, pt2, cv::Scalar(255), 1); // 하얀 선으로 그리기
         } else { // 수평 행
             pt1 = Point(0,rho/sin(theta)); // 첫 번째 열에서 해당 선의 교차점  
             pt2 = Point(result.cols,(rho-result.cols*cos(theta))/sin(theta));
@@ -143,4 +142,3 @@ int main(){
 
     return 0;
 }
-
