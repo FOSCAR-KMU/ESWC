@@ -2,10 +2,13 @@
 #include <iostream>
 #include <utility>
 
-#define IMGYE 30
-#define IMGYE2 5
+#define IMGYE 100
+#define IMGYE2 20
+#define IMGYE3 1000
 using namespace std;
 using namespace cv;
+
+void get_center_point(const Mat& binaryImg, int & center_x, int & center_y);
 
 //0 빨강 1 노랑
 //{ x, y,cnt }
@@ -14,36 +17,71 @@ bool check[2];
 int main(){
     
     VideoCapture cap(1);
-    if(!cap.isOpened())
-        return -1;
+    // if(!cap.isOpened())
+    //     return -1;
 
-    Vec3b vl1(0, 100, 50);
-    Vec3b vu1(100, 255, 200);
+    // Vec3b vl1(0, 100, 50);
+    // Vec3b vu1(100, 255, 200);
 
-    Vec3b vl2(165, 100, 50);
-    Vec3b vu2(179, 255, 200);
+    // Vec3b vl2(165, 100, 50);
+    // Vec3b vu2(179, 255, 200);
+    int cnt = 0;
+    const Vec3b HSV_RED_LOWER = Vec3b(0, 100, 100);
+    const Vec3b HSV_RED_UPPER = Vec3b(10, 255, 255);
+
+    const Vec3b HSV_RED_LOWER1 = Vec3b(160, 100, 100);
+    const Vec3b HSV_RED_UPPER1 = Vec3b(179, 255, 255);
+
+    const Vec3b HSV_YELLOW_LOWER = Vec3b(20, 40, 130);
+    const Vec3b HSV_YELLOW_UPPER = Vec3b(50, 255, 255);
+
+    const Vec3b HSV_GREEN_LOWER = Vec3b(60, 100, 50);
+    const Vec3b HSV_GREEN_UPPER = Vec3b(110, 255, 255);
     
     check[0] = false;
     check[1] = false;
     
     v.push_back({0, 0, 0});
     v.push_back({0, 0, 0});
-    int cnt = 0;
+
+    Point2f diff;
+    Point2f leftgreen;
+    Point2f green;
+
     for(;;){
-        Mat frame, hsv, result1, result2, result;
-        cap >> frame;
+        if(waitKey(30) >= 0) break;
+        Mat frame, hsv, redBinaryImg, redBinaryImg1, yellowBinaryImg, greenBinaryImg, result, result1, result2;
+        // cap >> frame;
+
+        cap >> frame;// = imread("선택 영역_001.png");
         
         cvtColor(frame, hsv, COLOR_BGR2HSV);
-        inRange(hsv, vl1, vu1, result1);
-        inRange(hsv, vl2 ,vu2, result2);
-        addWeighted(result1, 1.0, result2, 1.0, 0.0, result);
 
-        Mat edge;
-        Canny(result, edge, 230, 280);
-        //GaussianBlur(result, result, Size(3, 3), 2, 2);
+        inRange(hsv, HSV_RED_LOWER, HSV_RED_UPPER, redBinaryImg);
+        inRange(hsv, HSV_RED_LOWER1, HSV_RED_UPPER1, redBinaryImg1);
+
+        redBinaryImg = redBinaryImg | redBinaryImg1;
+
+        inRange(hsv, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, yellowBinaryImg);
+
+        inRange(hsv, HSV_GREEN_LOWER, HSV_GREEN_UPPER, greenBinaryImg);
+        imshow("frame",frame);
+        //imshow("redBinaryImg", redBinaryImg);
+        //imshow("yellowBinaryImg", yellowBinaryImg);
+        //imshow("greenBinaryImg", greenBinaryImg);
         
-        vector<Vec3f> circles;
-        HoughCircles(edge, circles, cv::HOUGH_GRADIENT, 1, result.rows/8, 120, 35, 0, 0);
+        Point2i redCenter = {-1, -1};
+        Point2i yellowCenter = {-1, -1};
+        Point2i greenCenter = {-1, -1};
+        
+        get_center_point(redBinaryImg, redCenter.x,redCenter.y);
+        get_center_point(yellowBinaryImg, yellowCenter.x, yellowCenter.y);
+        get_center_point(greenBinaryImg, greenCenter.x, greenCenter.y);
+
+        cout << redCenter.x << " " << redCenter.y << endl;
+        cout << yellowCenter.x << " " << yellowCenter.y << endl;
+        cout << greenCenter.x << " " << greenCenter.y << endl;
+
         if(check[0] && check[1]){
             cout << "초록불을 기다림" << '\n';
         }else if(check[0]){
@@ -51,59 +89,87 @@ int main(){
         }else{
             cout << "빨강불을 기다림" << '\n';
         }
+ 
         if(check[0] && check[1]){
-            Point2f diff = {v[1][0] - v[0][0], v[1][1] - v[0][1]};
-            Point2f leftgreen = {v[1][0] + diff.x, v[1][1] + diff.y};
-            Point2f green = {v[1][0] + 2 * diff.x, v[1][1] + 2 * diff.y};
+            diff = {v[1][0] - v[0][0], v[1][1] - v[0][1]};
+            leftgreen = {v[1][0] + diff.x, v[1][1] + diff.y};
+            green = {v[1][0] + 2 * diff.x, v[1][1] + 2 * diff.y};
         }
- 	    for(size_t current_circle = 0; current_circle < circles.size(); ++current_circle) {
- 	    	cv::Point center(round(circles[current_circle][0]), round(circles[current_circle][1]));
- 	    	int radius = round(circles[current_circle][2]);
-            if(!check[0]){
-                int distSquare = (v[0][0] - circles[current_circle][0]) * (v[0][0] - circles[current_circle][0]) +
-                (v[0][1] - circles[current_circle][1]) * (v[0][1] - circles[current_circle][1]);
-                if(distSquare < IMGYE){
-                    cnt++;
-                }else{
-                    cnt = 0;
-                    v[0][0] = circles[current_circle][0];
-                    v[0][1] = circles[current_circle][1];
-                }
-                if(cnt > IMGYE2)
-                    check[0] = true;
-            }else if(!check[1]){
-                int dist = (v[0][0] - circles[current_circle][0]) * (v[0][0] - circles[current_circle][0]) +
-                (v[0][1] - circles[current_circle][1]) * (v[0][1] - circles[current_circle][1]);
-                int distSquare = (v[1][0] - circles[current_circle][0]) * (v[1][0] - circles[current_circle][0]) +
-                (v[1][1] - circles[current_circle][1]) * (v[1][1] - circles[current_circle][1]);
-                if(dist > IMGYE && distSquare < IMGYE){
-                    cnt++;
-                }else{
-                    cnt = 0;
-                    v[1][0] = circles[current_circle][0];
-                    v[1][1] = circles[current_circle][1];
-                }
-                if(cnt > IMGYE2)
-                    check[1] = true;
+        if(!check[0]){
+            if(redCenter.x == -1 || redCenter.y == -1)
+                continue;
+            cout << "red print dist : ";
+            int distSquare = (v[0][0] - redCenter.x) * (v[0][0] - redCenter.x) +
+            (v[0][1] - redCenter.y) * (v[0][1] - redCenter.y);
+            cout << distSquare << '\n';
+            if(distSquare < IMGYE){
+                cnt++;
             }else{
-                int distSquare1 = (v[0][0] - circles[current_circle][0]) * (v[0][0] - circles[current_circle][0]) +
-                (v[0][1] - circles[current_circle][1]) * (v[0][1] - circles[current_circle][1]);
-                if(distSquare1 < IMGYE){
-                    cout << "left 시발" <<'\n';
-                }
-                int distSquare2 = (v[1][0] - circles[current_circle][0]) * (v[1][0] - circles[current_circle][0]) +
-                (v[1][1] - circles[current_circle][1]) * (v[1][1] - circles[current_circle][1]);
-                if(distSquare2 < IMGYE){
-                    cout << "right 시발" <<'\n';
-                }
+                cnt = 0;
+                v[0][0] = redCenter.x;
+                v[0][1] = redCenter.y;
             }
- 	    	cv::circle(frame, center, radius, cv::Scalar(0, 255, 0), 5);
- 	    }
-        imshow("frame", frame);
-        imshow("result", edge);
+            if(cnt > IMGYE2)
+                check[0] = true;
+        }else if(!check[1]){
+            if(yellowCenter.x == -1 || yellowCenter.y == -1)
+                continue;
+            int dist = (v[0][0] - redCenter.x) * (v[0][0] - redCenter.x) +
+            (v[0][1] - redCenter.y) * (v[0][1] - redCenter.y);
+            int distSquare = (v[1][0] - yellowCenter.x) * (v[1][0] - yellowCenter.x) +
+            (v[1][1] - yellowCenter.y) * (v[1][1] - yellowCenter.y);
+            if(distSquare < IMGYE){
+                cnt++;
+            }else{
+                cnt = 0;
+                v[1][0] = yellowCenter.x;
+                v[1][1] = yellowCenter.y;
+            }
+            if(cnt > IMGYE2)
+                check[1] = true;
+        }else{
+            int differ = (leftgreen.x - greenCenter.x) * (leftgreen.x - greenCenter.x) + (leftgreen.y - greenCenter.y) * (leftgreen.y - greenCenter.y);
+            cout << "differ : " << differ << ' ';
+            cout << "leftgreen : " << leftgreen << '\n';
+            
+            if(differ < IMGYE3){
+                cout << "left 시발" <<'\n';
+            }
+            
+            differ = (green.x - greenCenter.x) * (green.x - greenCenter.x) + (green.y - greenCenter.y) * (green.y - greenCenter.y);
+            cout << "differ : " << differ << ' ';
+            cout << "green : " << differ << '\n';
+            
+            if(differ < IMGYE3){
+                cout << "right 시발" <<'\n';
+            }
+        }
+        //imshow("frame", frame);
+        // imshow("binary", result);
 
-        if(waitKey(30) >= 0) break;
+        
     }
-    
     return 0;
 }
+
+void get_center_point(const Mat& binaryImg, int & center_x, int & center_y){
+
+    int cnt_x = 0;
+    int cnt_y = 0;
+    int cnt = 0;
+
+    for(int i = 0; i < binaryImg.cols; i++){
+        for(int j = 0; j < binaryImg.rows; j++){
+            if (binaryImg.at<uchar>(j, i) == 255){
+                cnt_x += i;
+                cnt_y += j;
+                cnt++;
+            }
+        }
+    }
+
+    if(cnt != 0 && cnt > IMGYE){
+        center_x = cnt_x / cnt;
+        center_y = cnt_y / cnt;
+    }
+ }
