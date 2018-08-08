@@ -110,7 +110,7 @@ int main(){
             pt1 = Point(rho/cos(theta), 0); // 첫 행에서 해당 선의 교차점   
             pt2 = Point((rho-result.rows*sin(theta))/cos(theta), result.rows);
             // 마지막 행에서 해당 선의 교차점
-            cv::line(img, pt1, pt2, cv::Scalar(255), 1); // 하얀 선으로 그리기
+            cv::line(roi, pt1, pt2, cv::Scalar(255), 1); // 하얀 선으로 그리기
         } else { // 수평 행
             pt1 = Point(0,rho/sin(theta)); // 첫 번째 열에서 해당 선의 교차점  
             pt2 = Point(result.cols,(rho-result.cols*cos(theta))/sin(theta));
@@ -128,8 +128,8 @@ int main(){
     for(iter1 = line_point.begin() ; iter1 != line_point.end() ; ++iter1)
     {
         Point temp_intersect_point1, temp_intersect_point2;
-        get_intersectpoint(Point(0, 0), Point(0, 1334), (*iter1).first, (*iter1).second, &temp_intersect_point1);
-        get_intersectpoint(Point(750, 0), Point(750, 1334), (*iter1).first, (*iter1).second, &temp_intersect_point2);
+        get_intersectpoint(Point(0, 0), Point(1334, 0), (*iter1).first, (*iter1).second, &temp_intersect_point1);
+        get_intersectpoint(Point(0, 750), Point(1334, 750), (*iter1).first, (*iter1).second, &temp_intersect_point2);
         result_point.push_back(temp_intersect_point1);
         result_point.push_back(temp_intersect_point2);
     }
