@@ -1,4 +1,3 @@
-
 #include <iostream>
 #include <vector>
 #include <stdio.h>
@@ -29,7 +28,6 @@ const Vec3b HSV_YELLOW_UPPER = Vec3b(50, 255, 255);
 
 const Vec3b HSV_WHITE_LOWER = Vec3b(80, 0, 180);
 const Vec3b HSV_WHITE_UPPER = Vec3b(180, 60, 255);
-;
 
 const Vec3b HSV_RED_LOWER = Vec3b(0, 100, 100);
 const Vec3b HSV_RED_UPPER = Vec3b(10, 255, 255);
@@ -43,7 +41,7 @@ const Vec3b YUV_LOWER = Vec3b(10, 110, 120);
 const Vec3b YUV_UPPER = Vec3b(70, 130, 140);
 
 const int Unexpected_Obstacle_Threshold = 5000;
-const int stop_line_threshold = 800;
+const int stop_line_threshold = 300;
 
 bool get_intersectpoint(const Point& AP1, const Point& AP2,	const Point& BP1, const Point& BP2, Point* IP);
 void v_roi(Mat& img, Mat& img_ROI, const Point& p1, const Point& p2);
@@ -52,6 +50,8 @@ bool hough_left(Mat& img, Mat& srcRGB, Point* p1, Point* p2);
 bool hough_right(Mat& img, Mat& srcRGB, Point* p1, Point* p2);
 int curve_detector(Mat& leftROI, Mat& rightROI);
 int rotary_curve_detector(Mat& leftROI, Mat& rightROI);
+bool hough_curve(Mat& img, Mat& srcRGB, Point* p1, Point* p2);
+float data_transform(float x, float in_min, float in_max, float out_min, float out_max);
 
 
 extern "C" {
@@ -85,43 +85,9 @@ int outbreak(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int n
 
     cvtColor(binaryImg1, binaryImg1, CV_GRAY2BGR);
 
-    resize(binaryImg1, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
+    // resize(binaryImg1, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
 
     return redCount;
-
-}
-
-int enter_the_rotary(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh){
-
-
-  Mat srcRGB(ih, iw, CV_8UC3, srcBuf); //input
-  Mat dstRGB(nh, nw, CV_8UC3, outBuf); //ouput
-
-  Mat resRGB(ih, iw, CV_8UC3);         //result
-
-  Mat roiImg;
-  Mat yuvImg;
-  Mat binaryImg;
-
-  int cnt = 0;
-
-  roiImg = srcRGB(Rect(srcRGB.cols/6, srcRGB.rows/3 * 2, srcRGB.cols/6 * 5, srcRGB.rows/3));
-
-  cvtColor(roiImg, yuvImg, CV_BGR2YUV);
-
-  inRange(yuvImg, YUV_LOWER, YUV_UPPER, binaryImg);
-
-  for(int i = 0; i < binaryImg.cols; i++){
-    for(int j = 0; j < binaryImg.rows; j++){
-      if(binaryImg.at<uchar>(j, i) == 255) cnt ++;
-    }
-  }
-
-  cvtColor(binaryImg, binaryImg, CV_GRAY2BGR);
-
-  resize(binaryImg, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
-
-  return cnt;
 
 }
 
@@ -141,14 +107,14 @@ int line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, 
 
   Mat resRGB(ih, iw, CV_8UC3); //reuslt
 
-  // ĳ�� �˰����� ����
+  // ĳ ˰
   Mat leftROI, rightROI;
   Mat hsvImg1, hsvImg2;
   Mat binaryImg1, binaryImg2;
   Mat cannyImg1, cannyImg2;
 
-  leftROI = srcRGB(Rect(0, srcRGB.rows/2, srcRGB.cols/2, srcRGB.rows/2));
-  rightROI = srcRGB(Rect(srcRGB.cols/2, srcRGB.rows/2, srcRGB.cols/2, srcRGB.rows/2));
+  leftROI = srcRGB(Rect(0, srcRGB.rows/3 * 2, srcRGB.cols/2, srcRGB.rows/3));
+  rightROI = srcRGB(Rect(srcRGB.cols/2, srcRGB.rows/3 * 2, srcRGB.cols/2, srcRGB.rows/3));
 
   hconcat(leftROI, rightROI, resRGB);
 
@@ -184,110 +150,45 @@ int line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, 
 
 /////////////////////////////소실점 주행////////////////////////////////////////////////
    get_intersectpoint(p1, p2, Point(p3.x + 160, p3.y), Point(p4.x + 160, p4.y), &p5);
-   float steer = 1000.0 + 3.1 * (320.0 - (float) p5.x);
 
 //////////////////////////////////////////////////////////////////////////////////////
 
-    angle = steer;
+  float steer;
+  float x_Difference = 160.0 - p5.x;
 
-    if(angle > 2000){
-      angle = 2000;
-    }
-    else if(angle < 1000){
-      angle = 1000;
-    }
+  if(x_Difference > 0.0){
 
+    steer = 1520.0 + 3.2 * x_Difference;
   }
-
-  // resize(resRGB, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
-
-
-  return angle;
-
-}
-
-int rotary_line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh){
-
-  int angle = 1500;
-  Point p1, p2, p3, p4, p5;
-
-  volatile bool left_error = true;
-  volatile bool right_error = true;
-
-
-  Mat srcRGB(ih, iw, CV_8UC3, srcBuf); //input
-  Mat dstRGB(nh, nw, CV_8UC3, outBuf); //output
-
-  Mat resRGB(ih, iw, CV_8UC3); //reuslt
-
-  // ĳ�� �˰����� ����
-  Mat leftROI, rightROI;
-  Mat hsvImg1, hsvImg2;
-  Mat binaryImg1, binaryImg2;
-  Mat cannyImg1, cannyImg2;
-
-  leftROI = srcRGB(Rect(0, srcRGB.rows/2, srcRGB.cols/2, srcRGB.rows/2));
-  rightROI = srcRGB(Rect(srcRGB.cols/2, srcRGB.rows/2, srcRGB.cols/2, srcRGB.rows/2));
-
-////////////////////////disp//////////////////////////////////////////
-  Mat checkROI = srcRGB(Rect(0, srcRGB.rows/16 * 13, srcRGB.cols, srcRGB.rows/16 * 3));
-  Mat binaryImg3;
-
-  inRange(checkROI, RGB_WHITE_LOWER, RGB_WHITE_UPPER, binaryImg3);
-
-  cvtColor(binaryImg3, binaryImg3, CV_GRAY2BGR);
-
-  resize(binaryImg3, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
-///////////////////////////////////////////////////////////////////////
-
-
-  // hconcat(leftROI, rightROI, resRGB);
-
-
-  cvtColor(leftROI, hsvImg1, CV_BGR2HSV);
-  cvtColor(rightROI, hsvImg2, CV_BGR2HSV);
-
-  inRange(hsvImg1, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, binaryImg1);
-  inRange(hsvImg2, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, binaryImg2);
-
-
-  Canny(binaryImg1, cannyImg1, 150, 250);
-  Canny(binaryImg2, cannyImg2, 150, 250);
-
-  left_error = hough_left(cannyImg1, leftROI, &p1, &p2);
-  right_error = hough_right(cannyImg2, rightROI, &p3, &p4);
-
-
-
-
-  if(left_error || right_error){
-    angle = rotary_curve_detector(leftROI, rightROI);
+  else if(x_Difference < 0.0){
+    steer = 1520.0 + (-3.2) * x_Difference;
   }
   else{
-
-    line(leftROI, p1, p2, COLOR_BLUE, 3, CV_AA);
-    line(rightROI, p3, p4, COLOR_BLUE, 3, CV_AA);
-
+    steer = 1520.0;
+  }
 
 
-/////////////////////////////소실점 주행////////////////////////////////////////////////
-   get_intersectpoint(p1, p2, Point(p3.x + 160, p3.y), Point(p4.x + 160, p4.y), &p5);
-   float steer = 1000.0 + 3.1 * (320.0 - (float) p5.x);
 
-//////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+  angle = steer;
 
     angle = steer;
 
-    if(angle > 2000){
-      angle = 2000;
-    }
-    else if(angle < 1000){
-      angle = 1000;
-    }
+
 
   }
 
   // resize(resRGB, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
+
+  if(angle > 2000){
+    angle = 2000;
+  }
+  else if(angle < 1000){
+    angle = 1000;
+  }
 
 
   return angle;
@@ -327,47 +228,290 @@ bool stop_line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* ou
   else return false;
 }
 
-// int stop_line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh){
-//
-//
-//   Mat srcRGB(ih, iw, CV_8UC3, srcBuf); //input
-//   Mat dstRGB(nh, nw, CV_8UC3, outBuf); //ouput
-//
-//   Mat resRGB(ih, iw, CV_8UC3);         //result
-//
-//   Mat roiImg, hsvImg, binaryImg;
-//
-//   int cnt = 0;
-//
-//   roiImg = srcRGB(Rect(0, srcRGB.rows/4 * 3, srcRGB.cols, srcRGB.rows/4));
-//
-//   cvtColor(roiImg, hsvImg, CV_BGR2HSV);
-//
-//
-//   inRange(hsvImg, HSV_WHITE_LOWER, HSV_WHITE_UPPER, binaryImg);
-//
-//   for(int i = 0; i < binaryImg.cols; i++){
-//     for(int j = 0; j < binaryImg.rows; j++){
-//       if(binaryImg.at<uchar>(j, i) == 255) cnt ++;
-//     }
-//   }
-//
-//   cvtColor(binaryImg, binaryImg, CV_GRAY2BGR);
-//
-//   resize(binaryImg, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
-//
-//
-//  return cnt;
-// }
+int enter_the_rotary(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh){
+
+
+  Mat srcRGB(ih, iw, CV_8UC3, srcBuf); //input
+  Mat dstRGB(nh, nw, CV_8UC3, outBuf); //ouput
+
+  Mat resRGB(ih, iw, CV_8UC3);         //result
+
+  Mat roiImg;
+  Mat yuvImg;
+  Mat binaryImg;
+
+  int cnt = 0;
+
+  roiImg = srcRGB(Rect(srcRGB.cols/6, srcRGB.rows/3 * 2, srcRGB.cols/6 * 5, srcRGB.rows/3));
+
+  cvtColor(roiImg, yuvImg, CV_BGR2YUV);
+
+  inRange(yuvImg, YUV_LOWER, YUV_UPPER, binaryImg);
+
+  for(int i = 0; i < binaryImg.cols; i++){
+    for(int j = 0; j < binaryImg.rows; j++){
+      if(binaryImg.at<uchar>(j, i) == 255) cnt ++;
+    }
+  }
+
+  cvtColor(binaryImg, binaryImg, CV_GRAY2BGR);
+
+  resize(binaryImg, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
+
+  return cnt;
+
+}
+
+float get_slope_curve(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh){
+
+
+  Mat srcRGB(ih, iw, CV_8UC3, srcBuf); //input
+  Mat dstRGB(nh, nw, CV_8UC3, outBuf); //ouput
+
+  Mat resRGB(ih, iw, CV_8UC3);         //result
+
+  Mat roiImg;
+  Mat hsvImg1, binaryImg1;
+  Mat cannyImg1;
+
+  Point p1, p2;
+
+  bool error = true;
+
+  // hconcat(leftROI, rightROI, originImg);
+
+  roiImg = srcRGB(Rect(0, srcRGB.rows/3 * 2, srcRGB.cols, srcRGB.rows/3));
+
+  resize(roiImg, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
+
+
+  cvtColor(roiImg, hsvImg1, CV_BGR2HSV);
+
+  inRange(hsvImg1, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, binaryImg1);
+
+  Canny(binaryImg1, cannyImg1, 150, 250);
+
+
+  error = hough_curve(cannyImg1, roiImg, &p1, &p2);
+
+  float slope = get_slope(p1, p2);
+
+  float steer =  data_transform(slope, -0.5, -0.2, 0, 500);
+
+  steer = 1500.0 - steer;
+
+  float x_L, x_R, y = 60;
+
+  // return slope;
+
+
+   if(slope < 0.0){ // right rotate
+
+    x_L = (y - p1.y + slope * p1.x) / slope;
+
+    float sex = data_transform(x_L, -200, 220, 0.1, 1);
+
+    sex *= steer;
+
+
+    slope = slope * -1.0;
+
+
+    float temp = (1.5 - slope) * 100.0;
+
+
+    int angle = 1500 - temp;
+
+    if(angle < 1000){
+      angle = 1000;
+    }
+
+
+    return steer;
+  }
+  else {
+
+    x_R = (y - p1.y + slope * p1.x) / slope;
+
+    return x_R;
+
+    // if(x_R < 280) return 2000;
+
+    float temp = (1.5 - slope) * 100.0;
+
+
+    int angle = 1500 + temp;
+
+    if(angle > 2000){
+      angle = 2000;
+    }
+
+    return x_R;
+
+  }
 
 
 
+
+
+
+  // return slope;
+
+  // float x_L, x_R, y = 30;
+  //
+  //
+  // if(error){
+  //   return 1520;
+  // }
+  // else if(slope < 0){ // right rotate
+  //
+  //   x_L = (y - p1.y + slope * p1.x) / slope;
+  //
+  //   if(x_L > 40) return 1000;
+  //
+  //   slope = slope * -1.0;
+  //
+  //
+  //   float temp = (1.5 - slope) * 100.0;
+  //
+  //
+  //   int angle = 1500 - temp;
+  //
+  //   if(angle < 1000){
+  //     angle = 1000;
+  //   }
+  //
+  //
+  //   return angle;
+  // }
+  // else {
+  //
+  //   x_R = (y - p1.y + slope * p1.x) / slope;
+  //
+  //   if(x_R < 280) return 2000;
+  //
+  //   float temp = (1.5 - slope) * 100.0;
+  //
+  //
+  //   int angle = 1500 + temp;
+  //
+  //   if(angle > 2000){
+  //     angle = 2000;
+  //   }
+  //
+  //   return angle;
+  //
+  // }
 
 
 }
 
-void v_roi(Mat& img, Mat& img_ROI, const Point& p1, const Point& p2) {
+int rotary_line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh){
 
+  int angle = 1500;
+  Point p1, p2, p3, p4, p5;
+
+  volatile bool left_error = true;
+  volatile bool right_error = true;
+
+
+  Mat srcRGB(ih, iw, CV_8UC3, srcBuf); //input
+  Mat dstRGB(nh, nw, CV_8UC3, outBuf); //output
+
+  Mat resRGB(ih, iw, CV_8UC3); //reuslt
+
+  // ĳ ˰
+  Mat leftROI, rightROI;
+  Mat hsvImg1, hsvImg2;
+  Mat binaryImg1, binaryImg2;
+  Mat cannyImg1, cannyImg2;
+
+  leftROI = srcRGB(Rect(0, srcRGB.rows/3 * 2, srcRGB.cols/2, srcRGB.rows/3));
+  rightROI = srcRGB(Rect(srcRGB.cols/3 * 2, srcRGB.rows/2, srcRGB.cols/2, srcRGB.rows/3));
+
+
+  hconcat(leftROI, rightROI, resRGB);
+
+  resize(resRGB, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
+
+////////////////////////disp//////////////////////////////////////////
+  Mat checkROI = srcRGB(Rect(0, srcRGB.rows/16 * 13, srcRGB.cols, srcRGB.rows/16 * 3));
+  Mat binaryImg3;
+
+  inRange(checkROI, RGB_WHITE_LOWER, RGB_WHITE_UPPER, binaryImg3);
+
+  cvtColor(binaryImg3, binaryImg3, CV_GRAY2BGR);
+
+///////////////////////////////////////////////////////////////////////
+
+
+  // hconcat(leftROI, rightROI, resRGB);
+
+
+  cvtColor(leftROI, hsvImg1, CV_BGR2HSV);
+  cvtColor(rightROI, hsvImg2, CV_BGR2HSV);
+
+  inRange(hsvImg1, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, binaryImg1);
+  inRange(hsvImg2, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, binaryImg2);
+
+
+  Canny(binaryImg1, cannyImg1, 150, 250);
+  Canny(binaryImg2, cannyImg2, 150, 250);
+
+  left_error = hough_left(cannyImg1, leftROI, &p1, &p2);
+  right_error = hough_right(cannyImg2, rightROI, &p3, &p4);
+
+  //곡선
+  if(left_error || right_error){
+    angle = rotary_curve_detector(leftROI, rightROI);
+  }
+  //직선
+  else{
+
+    // line(leftROI, p1, p2, COLOR_BLUE, 3, CV_AA);
+    // line(rightROI, p3, p4, COLOR_BLUE, 3, CV_AA);
+
+/////////////////////직진 코스 시 소실점 주행////////////////////////////////////////////////
+   get_intersectpoint(p1, p2, Point(p3.x + 160, p3.y), Point(p4.x + 160, p4.y), &p5);
+
+   float steer;
+   float x_Difference = 160.0 - p5.x;
+
+   if(x_Difference > 0.0){
+
+     steer = 1520.0 + 3.2 * x_Difference;
+   }
+   else if(x_Difference < 0.0){
+     steer = 1520.0 - 3.2 * x_Difference;
+   }
+   else{
+     steer = 1520.0;
+   }
+
+   angle = steer;
+
+   if(angle > 2000){
+     angle = 2000;
+   }
+   else if(angle < 1000){
+     angle = 1000;
+   }
+//////////////////////////////////////////////////////////////////////////////////////
+
+  }
+
+  // resize(resRGB, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
+
+  return angle;
+
+}
+
+
+}
+
+////////////////////밑에 함수들은 exam_cv.cpp에서만 사용하는 함수들/////////////////////
+
+void v_roi(Mat& img, Mat& img_ROI, const Point& p1, const Point& p2) {
 
 	float slope = get_slope(p1, p2);
 	float alphaY = 30.f / sqrt(slope*slope + 1);
@@ -389,7 +533,6 @@ void v_roi(Mat& img, Mat& img_ROI, const Point& p1, const Point& p2) {
 
 	Mat filteredImg_Left;
 	img.copyTo(filteredImg_Left, roi);
-
 
 	img_ROI = filteredImg_Left.clone();
 
@@ -439,7 +582,7 @@ bool hough_left(Mat& img, Mat& srcRGB, Point* p1, Point* p2) {
   Point point2;
 
   int count = 0, x1 = 0, x2 = 0, y1 = 0, y2 = 0;
-  int threshold = 40;
+  int threshold = 20;
 
   for (int i = 10; i > 0; i--){
 
@@ -487,8 +630,6 @@ bool hough_left(Mat& img, Mat& srcRGB, Point* p1, Point* p2) {
   			double a = cos(theta), b = sin(theta);
   			double x0 = a * rho, y0 = b * rho;
 
-  			// cout << "pt : " << mypt1.x << ' ' << mypt1.y << endl;
-
   			int _x1 = int(x0 + 1000 * (-b));
   			int _y1 = int(y0 + 1000 * (a));
   			int _x2 = int(x0 - 1000 * (-b));
@@ -506,8 +647,6 @@ bool hough_left(Mat& img, Mat& srcRGB, Point* p1, Point* p2) {
   			theta = (float)mypt2.y / 100;
   			a = cos(theta), b = sin(theta);
   			x0 = a * rho, y0 = b * rho;
-
-  			// cout << "pt : " << mypt2.x << ' ' << mypt2.y << endl;
 
   			_x1 = int(x0 + 1000 * (-b));
   			_y1 = int(y0 + 1000 * (a));
@@ -542,7 +681,7 @@ bool hough_right(Mat& img, Mat& srcRGB, Point* p1, Point* p2) {
   Point point2;
 
   int count = 0, x1 = 0, x2 = 0, y1 = 0, y2 = 0;
-  int threshold = 40;
+  int threshold = 20;
 
   for (int i = 10; i > 0; i--){
     HoughLines(img, linesR, 1, CV_PI / 180, threshold);
@@ -578,7 +717,6 @@ bool hough_right(Mat& img, Mat& srcRGB, Point* p1, Point* p2) {
 
   				double a = cos(theta), b = sin(theta);
   				double x0 = a * rho, y0 = b * rho;
-  				// cout << "x0, y0 : " << rho << ' ' << theta << endl;
   				h_points.at<Point2f>(i, 0) = Point2f(rho, (float)(theta * 100));
   			}
   			kmeans(h_points, clusterCount, labels,
@@ -609,8 +747,6 @@ bool hough_right(Mat& img, Mat& srcRGB, Point* p1, Point* p2) {
   			theta = (float)mypt2.y / 100;
   			a = cos(theta), b = sin(theta);
   			x0 = a * rho, y0 = b * rho;
-
-  			// cout << "pt : " << mypt2.x << ' ' << mypt2.y << endl;
 
   			_x1 = int(x0 + 1000 * (-b));
   			_y1 = int(y0 + 1000 * (a));
@@ -643,7 +779,7 @@ bool hough_curve(Mat& img, Mat& srcRGB, Point* p1, Point* p2) {
   Point point2;
 
   int count = 0, x1 = 0, x2 = 0, y1 = 0, y2 = 0;
-  int threshold = 40;
+  int threshold = 20;
 
   for (int i = 10; i > 0; i--){
     HoughLines(img, lines, 1, CV_PI / 180, threshold);
@@ -661,7 +797,6 @@ bool hough_curve(Mat& img, Mat& srcRGB, Point* p1, Point* p2) {
 
   				double a = cos(theta), b = sin(theta);
   				double x0 = a * rho, y0 = b * rho;
-  				// cout << "x0, y0 : " << rho << ' ' << theta << endl;
   				h_points.at<Point2f>(i, 0) = Point2f(rho, (float)(theta * 100));
   			}
   			kmeans(h_points, clusterCount, labels,
@@ -692,8 +827,6 @@ bool hough_curve(Mat& img, Mat& srcRGB, Point* p1, Point* p2) {
   			theta = (float)mypt2.y / 100;
   			a = cos(theta), b = sin(theta);
   			x0 = a * rho, y0 = b * rho;
-
-  			// cout << "pt : " << mypt2.x << ' ' << mypt2.y << endl;
 
   			_x1 = int(x0 + 1000 * (-b));
   			_y1 = int(y0 + 1000 * (a));
@@ -731,7 +864,7 @@ int curve_detector(Mat& leftROI, Mat& rightROI){
 
   hconcat(leftROI, rightROI, originImg);
 
-  roiImg = originImg(Rect(0, originImg.rows/8 * 5, originImg.cols, originImg.rows/8 * 3));
+  roiImg = originImg(Rect(0, originImg.rows/2, originImg.cols, originImg.rows/2));
 
   cvtColor(roiImg, hsvImg1, CV_BGR2HSV);
 
@@ -745,54 +878,51 @@ int curve_detector(Mat& leftROI, Mat& rightROI){
   float slope = get_slope(p1, p2);
 
 
-  float x_L, x_R, y = 33;
+  float x_L, x_R, y = 30;
 
 
   if(error){
-    return 1500;
+    return 1520;
   }
   else if(slope < 0){ // right rotate
 
+    float steer =  data_transform(slope, -1.0, -0.2, -500.0, 0.0);
+
     x_L = (y - p1.y + slope * p1.x) / slope;
 
-    if(x_L > 40) return 1000;
+    float dd = data_transform(x_L, -200.0, 220.0, 0 , 30.0);
 
-    slope = slope * -1.0;
+    steer = 1500.0 + steer + dd;
 
+    int angle = steer;
 
-    float temp = (1.0 - slope) * 400.0;
-
-    if(temp < 0.0) return 1100;
-
-    int angle = 1500 - temp;
-
-    if(angle < 1000){
-      angle = 1000;
-    }
-
-
+    if(slope < -1.0 || slope > -0.2) return 0;
     return angle;
   }
   else {
 
     x_R = (y - p1.y + slope * p1.x) / slope;
 
-    if(x_R < 280) return 2000;
-
-    float temp = (1.0 - slope) * 400.0;
-
-    if(temp < 0.0) return 1900;
+    float steer =  data_transform(slope, 0.2, 1.0, -500.0 , 0.0);
 
 
-    int angle = 1500 + temp;
+    float dd = data_transform(x_R, 120, 520, 0 , 30.0);
 
-    if(angle > 2000){
-      angle = 2000;
-    }
+    steer = 1500.0 - steer - dd ;
+    int angle = steer;
+
+    if(slope < 0.2 || slope > 1.0) return 0;
+
+
 
     return angle;
 
+
+
   }
+
+
+
 
 
 }
@@ -811,9 +941,9 @@ int rotary_curve_detector(Mat& leftROI, Mat& rightROI){
 
   hconcat(leftROI, rightROI, originImg);
 
-  roiImg = originImg(Rect(0, originImg.rows/8 * 5, originImg.cols, originImg.rows/8 * 3));
+  // roiImg = originImg(Rect(0, originImg.rows/2, originImg.cols, originImg.rows/2));
 
-  cvtColor(roiImg, hsvImg1, CV_BGR2HSV);
+  cvtColor(originImg, hsvImg1, CV_BGR2HSV);
 
   inRange(hsvImg1, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, binaryImg1);
   inRange(roiImg, RGB_WHITE_LOWER, RGB_WHITE_UPPER, binaryImg2);
@@ -828,26 +958,23 @@ int rotary_curve_detector(Mat& leftROI, Mat& rightROI){
 
   float slope = get_slope(p1, p2);
 
-  // view_slope = slope;
 
-  float x_L, x_R, y = 33;
-
-
+  float x_L, x_R, y = 30;
 
 
   if(error){
-    return 1500;
+    return 1520;
   }
-  else if(slope < 0){ // right rotate
+  else if(slope < 0){
 
     x_L = (y - p1.y + slope * p1.x) / slope;
 
-    if(x_L > 40) return 1000;
+    if(x_L > 20) return 1000;
 
     slope = slope * -1.0;
 
 
-    float temp = (1.0 - slope) * 400.0;
+    float temp = (1.5 - slope) * 250.0;
 
     int angle = 1500 - temp;
 
@@ -855,16 +982,15 @@ int rotary_curve_detector(Mat& leftROI, Mat& rightROI){
       angle = 1000;
     }
 
-
     return angle;
   }
   else {
 
     x_R = (y - p1.y + slope * p1.x) / slope;
 
-    if(x_R < 280) return 2000;
+    if(x_R < 300) return 2000;
 
-    float temp = (1.0 - slope) * 400.0;
+    float temp = (1.5 - slope) * 250.0;
 
     int angle = 1500 + temp;
 
@@ -876,5 +1002,9 @@ int rotary_curve_detector(Mat& leftROI, Mat& rightROI){
 
   }
 
+}
 
+float data_transform(float x, float in_min, float in_max, float out_min, float out_max)
+{
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }

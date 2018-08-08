@@ -8,7 +8,7 @@ extern "C" {
 //돌발 표지판 인식
 int outbreak(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh);
 
-//차선 인식(직선 + 곡선))
+//차선 인식(직선 + 곡선)
 int line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh, float slope[]);
 
 //카메라로 정지선 인식(회전교차로 진입전은 무조건 steer값 1500 이하)
@@ -16,9 +16,13 @@ bool stop_line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* ou
 // int stop_line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh);
 
 
-//회전교차로
+//회전교차로 진입전 차량 그림자 확인 함수
 int enter_the_rotary(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh);
+
+//회전교차로 전용 차선 인식
 int rotary_line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh);
+
+float get_slope_curve(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh);
 
 
 
