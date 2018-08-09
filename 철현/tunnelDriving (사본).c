@@ -32,8 +32,8 @@ void main(void)
     unsigned char status;
     short speed;
     unsigned char gain;
-    int position, posInit, posDes, posRead;
-    short angle;
+
+    short angle = 1500;
     int channel;
     int data1, data2;
     char sensor;
@@ -46,6 +46,7 @@ void main(void)
     int volt1 , debug1, volt2 , debug2;
     int isCollision[7]; //2 3 4 5 6
     int interval;
+    int pre ;
 
 
     printf("Tunnel Driving Test!!!!!!!!!!!!!!!\n");
@@ -54,27 +55,47 @@ void main(void)
     SpeedControlOnOff_Write(CONTROL);
 
     DesireSpeed_Write(150);
-    SteeringServoControl_Write(1500);
+    SteeringServoControl_Write(angle);
 
     while(1){
-      data1 = DistanceSensor(2);
-      volt1 = data_transform(data1, 0 , 4095 , 0 , 5000);
-      debug1 = (27.61 / (volt1 - 0.1696))*1000;
+       data1 = DistanceSensor(2);
+       volt1 = data_transform(data1, 0 , 4095 , 0 , 5000);
+       debug1 = (27.61 / (volt1 - 0.1696))*1000;
 
       data2 = DistanceSensor(6);
       volt2 = data_transform(data2, 0 , 4095 , 0 , 5000);
       debug2 = (27.61 / (volt2 - 0.1696))*1000;
 
-      interval = debug1-debug2;
-      interval  = data_transform(interval , -20 , 20 , -500 , 500);
-      angle = 1500 - interval;
+      //interval = debug1-debug2;
+      if(debug2 < 50 && debug1 > 50){ //왼쪽만 인식할 때
+        interval = debug2;
+        interval = data_transform(interval , 5 , 20 , -500 , 500);
+        pre = 1500 + interval;
+      }
+      else if(debug1 < 50 && debug2 > 50){ //오른쪽만 인식할때
+        interval = debug1;
+        interval = data_transform(interval , 5 , 20 , -500 , 500);
+        pre = 1500 - interval;
+      }
+      else if(debug1 < 50 && debug2 < 50){
+        interval = debug1 - debug2;
+        interval = data_transform(interval , 0 , 20 , -500 , 500);
+        pre = 1500 - interval;
+      }
+
+
+      if(angle != pre){
+        angle = pre;
+
       printf("스티어링 값 : %d \n" , angle);
       SteeringServoControl_Write(angle);
+      }
 
-      if(debug1 > 50){
+      if(debug2 > 50){
         DesireSpeed_Write(0);
         break;
       }
+
     }
 
 
@@ -131,3 +152,4 @@ void main(void)
       SteeringServoControl_Write(1500);
       */
 }
+
