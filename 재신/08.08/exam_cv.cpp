@@ -168,7 +168,7 @@ vector<Point> find_point_4_top_view(unsigned char* srcBuf, int iw, int ih, unsig
 
     // ĳ�� �˰����� ����
     Mat leftROI, rightROI;
-    Mat hsvImg1, hsvImg2;
+    Mat yuvImg1, yuvImg2;
     Mat binaryImg1, binaryImg2;
     Mat cannyImg1, cannyImg2;
 
@@ -178,11 +178,11 @@ vector<Point> find_point_4_top_view(unsigned char* srcBuf, int iw, int ih, unsig
     hconcat(leftROI, rightROI, resRGB);
 
 
-    cvtColor(leftROI, hsvImg1, CV_BGR2HSV);
-    cvtColor(rightROI, hsvImg2, CV_BGR2HSV);
+    cvtColor(leftROI, yuvImg1, CV_BGR2YUV);
+    cvtColor(rightROI, yuvImg2, CV_BGR2YUV);
 
-    inRange(hsvImg1, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, binaryImg1);
-    inRange(hsvImg2, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, binaryImg2);
+    inRange(yuvImg1, YUV_LOWER, YUV_UPPER, binaryImg1);
+    inRange(yuvImg2, YUV_LOWER, YUV_UPPER, binaryImg2);
 
 
     Canny(binaryImg1, cannyImg1, 150, 250);
