@@ -151,6 +151,63 @@ int enter_the_rotary(unsigned char* srcBuf, int iw, int ih, unsigned char* outBu
 
 }
 
+vector<Point> find_point_4_top_view(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh){
+  vector<Point> result;
+  while(1) {
+    Point p1, p2, p3, p4;
+    Point i_p1, i_p2, i_p3, i_p4;
+
+    bool left_error = true;
+    bool right_error = true;
+
+
+    Mat srcRGB(ih, iw, CV_8UC3, srcBuf); //input
+    Mat dstRGB(nh, nw, CV_8UC3, outBuf); //output
+
+    Mat resRGB(ih, iw, CV_8UC3); //reuslt
+
+    // ĳ�� �˰����� ����
+    Mat leftROI, rightROI;
+    Mat hsvImg1, hsvImg2;
+    Mat binaryImg1, binaryImg2;
+    Mat cannyImg1, cannyImg2;
+
+    leftROI = srcRGB(Rect(0, srcRGB.rows/2, srcRGB.cols/2, srcRGB.rows/2));
+    rightROI = srcRGB(Rect(srcRGB.cols/2, srcRGB.rows/2, srcRGB.cols/2, srcRGB.rows/2));
+
+    hconcat(leftROI, rightROI, resRGB);
+
+
+    cvtColor(leftROI, hsvImg1, CV_BGR2HSV);
+    cvtColor(rightROI, hsvImg2, CV_BGR2HSV);
+
+    inRange(hsvImg1, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, binaryImg1);
+    inRange(hsvImg2, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, binaryImg2);
+
+
+    Canny(binaryImg1, cannyImg1, 150, 250);
+    Canny(binaryImg2, cannyImg2, 150, 250);
+
+    left_error = hough_left(cannyImg1, leftROI, &p1, &p2);
+    right_error = hough_right(cannyImg2, rightROI, &p3, &p4);
+
+    if(!left_error && !right_error)
+    {
+      get_intersectpoint(p1, p2, Point(0, 0), Point(srcRGB.cols, 0), &i_p1);
+      get_intersectpoint(p1, p2, Point(0, srcRGB.rows), Point(srcRGB.cols, srcRGB.rows), &i_p2);
+      get_intersectpoint(Point(p3.x + 160, p3.y), Point(p4.x + 160, p4.y), Point(0, 0), Point(srcRGB.cols, 0), &i_p3);
+      get_intersectpoint(Point(p3.x + 160, p3.y), Point(p4.x + 160, p4.y), Point(0, srcRGB.rows), Point(srcRGB.cols, srcRGB.rows), &i_p4);
+
+      result.push_back(i_p1);
+      result.push_back(i_p2);
+      result.push_back(i_p3);
+      result.push_back(i_p4);
+      break;
+    }
+  }
+  return result;
+}
+
 int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh){
   Mat srcRGB(ih, iw, CV_8UC3, srcBuf); //input
   Mat dstRGB(nh, nw, CV_8UC3, outBuf); //output
