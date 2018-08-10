@@ -330,11 +330,18 @@ void * capture_thread(void *arg)
         //////////////////////////미션 실행 함수들////////////////////////////
 
 
-        if(rotary_flag == 1){
-          rotary_enter(vpe->disp, capt);
+        // if(rotary_flag == 1){
+        //   rotary_enter(vpe->disp, capt);
+        // }
+        // else{
+        //   drive(vpe->disp, capt);
+        // }
+
+        if(passing_lane_number == -1) {
+            choosing_lane(vpe->disp, capt);
         }
-        else{
-          drive(vpe->disp, capt);
+        else {
+            
         }
 
 
@@ -700,77 +707,69 @@ int main(int argc, char **argv)
 
   PositionControlOnOff_Write(UNCONTROL);
 
-
-////////////////////////////회전교차로 변수////////////////////////////////////////
-
-  const int max_rotary_threshold = 300;
-  const int min_rotary_threshold = 40;
-
-  int rotary_state_flag = 0;
-  // 0 : 차가 지나가는 도중
-  // 1 : 차가 완전히 지나갔을 경우
-
-
-
 ////////////////////////////////////////////////////////////////////////////////
 
 
 
   while(1){
-
-    // 정지선 인식 = 로타리 시작전
-    if(rotary_flag == 0){
-
-      int flag = 0;
-      sensor = LineSensor_Read();   // black:1, white:0
-      printf("LineSensor_Read() = ");
-
-      for(i = 0; i < 8; i++){
-        if((i % 4) ==0) printf(" ");
-        if((sensor & byte)) printf("1");
-        else{
-          printf("0");
-          if(i != 0) flag++;
-        }
-        sensor = sensor << 1;
+      if(passing_lane_number == -1)
+      {
+          
       }
 
-      printf("\n");
-      printf("flag : %d\n", flag);
+    // // 정지선 인식 = 로타리 시작전
+    // if(rotary_flag == 0){
 
-      if(flag >= 3){
-        printf("LineSensor_Read() = STOP! \n");
-        speed = 0;
-        DesireSpeed_Write(speed);
+    //   int flag = 0;
+    //   sensor = LineSensor_Read();   // black:1, white:0
+    //   printf("LineSensor_Read() = ");
 
-        rotary_flag = 1;
+    //   for(i = 0; i < 8; i++){
+    //     if((i % 4) ==0) printf(" ");
+    //     if((sensor & byte)) printf("1");
+    //     else{
+    //       printf("0");
+    //       if(i != 0) flag++;
+    //     }
+    //     sensor = sensor << 1;
+    //   }
 
-      }
-    }
-    else if(rotary_flag == 1){
+    //   printf("\n");
+    //   printf("flag : %d\n", flag);
 
-      printf("%d\n", rotary_enter_count);
+    //   if(flag >= 3){
+    //     printf("LineSensor_Read() = STOP! \n");
+    //     speed = 0;
+    //     DesireSpeed_Write(speed);
 
-      if(rotary_enter_count > max_rotary_threshold && rotary_state_flag == 0){
-        rotary_state_flag = 1;
-      }
-      else if(rotary_enter_count < min_rotary_threshold && rotary_state_flag == 1){
-        printf("rotaty_start!!!");
-        rotary_flag = 2;
-        speed = 50;
-        DesireSpeed_Write(speed);
-      }
-      else if(rotary_state_flag == 0){
-        printf("rotary_wait!!!\n" );
-      }
+    //     rotary_flag = 1;
 
-    }
-    else if(rotary_flag == 2){
-      checkAnotherCar();
-    }
+    //   }
+    // }
+    // else if(rotary_flag == 1){
+
+    //   printf("%d\n", rotary_enter_count);
+
+    //   if(rotary_enter_count > max_rotary_threshold && rotary_state_flag == 0){
+    //     rotary_state_flag = 1;
+    //   }
+    //   else if(rotary_enter_count < min_rotary_threshold && rotary_state_flag == 1){
+    //     printf("rotaty_start!!!");
+    //     rotary_flag = 2;
+    //     speed = 50;
+    //     DesireSpeed_Write(speed);
+    //   }
+    //   else if(rotary_state_flag == 0){
+    //     printf("rotary_wait!!!\n" );
+    //   }
+
+    // }
+    // else if(rotary_flag == 2){
+    //   checkAnotherCar();
+    // }
 
 
-    SteeringServoControl_Write(angle);
+    // SteeringServoControl_Write(angle);
 
   }
 

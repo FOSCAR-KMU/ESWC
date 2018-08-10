@@ -43,6 +43,7 @@ bool hough_left(Mat& img, Mat& srcRGB, Point* p1, Point* p2);
 bool hough_right(Mat& img, Mat& srcRGB, Point* p1, Point* p2);
 int curve_detector(Mat& leftROI, Mat& rightROI);
 int rotary_curve_detector(Mat& leftROI, Mat& rightROI);
+Mat top_view_transform(Mat img, vector<Point> four_point);
 
 
 extern "C" {
@@ -151,61 +152,84 @@ int enter_the_rotary(unsigned char* srcBuf, int iw, int ih, unsigned char* outBu
 
 }
 
-vector<Point> find_point_4_top_view(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh){
+Mat top_view_transform(Mat img, vector<Point> four_point)
+{
+  Point2f L[2];
+  Point2f R[2];
+
+  Point2f src_vertices[4];
+  L[0] = Point(660, 430);
+  L[1] = Point(0, 742);
+  R[0] = Point(870, 444);
+  R[1] = Point(1400, 740);
+
+  float diff0 = R[0].x - L[0].x;
+  float diff1 = R[1].x - L[1].x;
+
+  src_vertices[0] = Point(L[0].x - diff0, R[0].y);
+  src_vertices[1] = Point(R[0].x + diff0, R[0].y);
+  src_vertices[2] = Point(R[1].x + diff1, R[1].y);
+  src_vertices[3] = Point(L[1].x - diff1, R[1].y);
+
+  Point2f dst_vertices[4];
+  dst_vertices[0] = Point(0, 0);
+  dst_vertices[1] = Point(img.cols, 0);
+  dst_vertices[2] = Point(img.cols, img.rows);
+  dst_vertices[3] = Point(0, img.rows);
+
+  Mat dst(img.rows, img.cols, CV_8UC3);
+
+  warpPerspective(img, dst, getPerspectiveTransform(src_vertices, dst_vertices), dst.size(), INTER_LINEAR, BORDER_CONSTANT);
+
+  return dst;
+}
+
+pair<bool, vector<Point> > find_point_4_top_view(Mat srcImg){
   vector<Point> result;
-  while(1) {
-    Point p1, p2, p3, p4;
-    Point i_p1, i_p2, i_p3, i_p4;
+  
+  Point p1, p2, p3, p4;
+  Point i_p1, i_p2, i_p3, i_p4;
 
-    bool left_error = true;
-    bool right_error = true;
+  bool left_error = true;
+  bool right_error = true;
 
+  // ĳ�� �˰����� ����
+  Mat leftROI, rightROI;
+  Mat yuvImg1, yuvImg2;
+  Mat binaryImg1, binaryImg2;
+  Mat cannyImg1, cannyImg2;
 
-    Mat srcRGB(ih, iw, CV_8UC3, srcBuf); //input
-    Mat dstRGB(nh, nw, CV_8UC3, outBuf); //output
+  leftROI  = srcImg(Rect(0, srcImg.rows/2, srcImg.cols/2, srcImg.rows/2));
+  rightROI = srcImg(Rect(srcImg.cols/2, srcImg.rows/2, srcImg.cols/2, srcImg.rows/2));
 
-    Mat resRGB(ih, iw, CV_8UC3); //reuslt
+  cvtColor(leftROI, yuvImg1, CV_BGR2YUV);
+  cvtColor(rightROI, yuvImg2, CV_BGR2YUV);
 
-    // ĳ�� �˰����� ����
-    Mat leftROI, rightROI;
-    Mat yuvImg1, yuvImg2;
-    Mat binaryImg1, binaryImg2;
-    Mat cannyImg1, cannyImg2;
-
-    leftROI = srcRGB(Rect(0, srcRGB.rows/2, srcRGB.cols/2, srcRGB.rows/2));
-    rightROI = srcRGB(Rect(srcRGB.cols/2, srcRGB.rows/2, srcRGB.cols/2, srcRGB.rows/2));
-
-    hconcat(leftROI, rightROI, resRGB);
+  inRange(yuvImg1, YUV_LOWER, YUV_UPPER, binaryImg1);
+  inRange(yuvImg2, YUV_LOWER, YUV_UPPER, binaryImg2);
 
 
-    cvtColor(leftROI, yuvImg1, CV_BGR2YUV);
-    cvtColor(rightROI, yuvImg2, CV_BGR2YUV);
+  Canny(binaryImg1, cannyImg1, 150, 250);
+  Canny(binaryImg2, cannyImg2, 150, 250);
 
-    inRange(yuvImg1, YUV_LOWER, YUV_UPPER, binaryImg1);
-    inRange(yuvImg2, YUV_LOWER, YUV_UPPER, binaryImg2);
+  left_error = hough_left(cannyImg1, leftROI, &p1, &p2);
+  right_error = hough_right(cannyImg2, rightROI, &p3, &p4);
 
+  if(!left_error && !right_error)
+  {
+    get_intersectpoint(p1, p2, Point(0, 0), Point(srcImg.cols, 0), &i_p1);
+    get_intersectpoint(p1, p2, Point(0, srcImg.rows), Point(srcImg.cols, srcImg.rows), &i_p2);
+    get_intersectpoint(Point(p3.x + 160, p3.y), Point(p4.x + 160, p4.y), Point(0, 0), Point(srcImg.cols, 0), &i_p3);
+    get_intersectpoint(Point(p3.x + 160, p3.y), Point(p4.x + 160, p4.y), Point(0, srcImg.rows), Point(srcImg.cols, srcImg.rows), &i_p4);
 
-    Canny(binaryImg1, cannyImg1, 150, 250);
-    Canny(binaryImg2, cannyImg2, 150, 250);
-
-    left_error = hough_left(cannyImg1, leftROI, &p1, &p2);
-    right_error = hough_right(cannyImg2, rightROI, &p3, &p4);
-
-    if(!left_error && !right_error)
-    {
-      get_intersectpoint(p1, p2, Point(0, 0), Point(srcRGB.cols, 0), &i_p1);
-      get_intersectpoint(p1, p2, Point(0, srcRGB.rows), Point(srcRGB.cols, srcRGB.rows), &i_p2);
-      get_intersectpoint(Point(p3.x + 160, p3.y), Point(p4.x + 160, p4.y), Point(0, 0), Point(srcRGB.cols, 0), &i_p3);
-      get_intersectpoint(Point(p3.x + 160, p3.y), Point(p4.x + 160, p4.y), Point(0, srcRGB.rows), Point(srcRGB.cols, srcRGB.rows), &i_p4);
-
-      result.push_back(i_p1);
-      result.push_back(i_p2);
-      result.push_back(i_p3);
-      result.push_back(i_p4);
-      break;
-    }
+    result.push_back(i_p1);
+    result.push_back(i_p2);
+    result.push_back(i_p3);
+    result.push_back(i_p4);
+    
+    return make_pair(true, result);
   }
-  return result;
+  else return make_pair(false, result);
 }
 
 int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh){
@@ -217,10 +241,18 @@ int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* out
   Mat roiImg;
   Mat yuvImg;
   Mat binaryImg;
+  Mat topViewImg;
 
   int cnt = 0;
+  bool flag;
 
   roiImg = srcRGB(Rect(srcRGB.cols/3 * 2, 0, srcRGB.cols/3, srcRGB.rows));
+
+  pair<bool, vector<Point> > temp = find_point_4_top_view(roiImg);
+
+  if(!temp.first) return -1;
+
+  topViewImg = top_view_transform(roiImg, temp.second);
 
   cvtColor(roiImg, yuvImg, CV_BGR2YUV);
 
