@@ -22,6 +22,8 @@ bool GetIntersectPoint(const Point& AP1, const Point& AP2,
                        const Vec3b HSV_WHITE_UPPER = Vec3b(180, 40, 255);
 
 
+                       const Vec3b HSV_GREEN_LOWER = Vec3b(60, 100, 50);
+                       const Vec3b HSV_GREEN_UPPER = Vec3b(110, 255, 255);
 
                        const Vec3b HSV_YELLOW_LOWER = Vec3b(20, 40, 130);
                        const Vec3b HSV_YELLOW_UPPER = Vec3b(50, 255, 255);
@@ -46,36 +48,45 @@ int main(){
 
   capture1.open(1);
 
-  Mat originImg1;
-  Mat originImg2;
+  Mat originImg;
+  Mat hsvImg, yuvImg;
+  Mat grayImg;
 
-  Mat grayImg1;
-  Mat grayImg2;
-
-  Mat hsvImg;
-  Mat yuvImg;
-
+  Mat whiteImg;
+  Mat greenImg;
+  Mat redImg1, redImg2;
+  Mat yellowImg;
 
   while(1) {
 
-    capture1 >> originImg1; // left_camera
+    // capture1 >> originImg; // left_camera
+
+    originImg = imread("선택 영역_002.png");
+
+    cvtColor(originImg, grayImg, COLOR_BGR2GRAY);
+    cvtColor(originImg, hsvImg, COLOR_BGR2HSV);
+    cvtColor(originImg, yuvImg, COLOR_BGR2YUV);
+
+    inRange(hsvImg, HSV_WHITE_LOWER, HSV_WHITE_UPPER, whiteImg);
+
+    inRange(hsvImg, HSV_GREEN_LOWER, HSV_GREEN_UPPER, greenImg);
+
+    inRange(hsvImg, HSV_RED_LOWER, HSV_RED_UPPER, redImg1);
+    inRange(hsvImg, HSV_RED_LOWER1, HSV_RED_UPPER1, redImg2);
+    redImg1 = redImg1 | redImg2;
+
+    inRange(hsvImg, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, yellowImg);
 
 
-    // 흑백화 하기
-    cvtColor(originImg1, grayImg1, COLOR_BGR2GRAY);
-    cvtColor(originImg1, hsvImg, COLOR_BGR2HSV);
-    cvtColor(originImg1, yuvImg, COLOR_BGR2YUV);
-
-    inRange(hsvImg, HSV_WHITE_LOWER, HSV_WHITE_UPPER, grayImg2);
-
-    // ROI 설정
-
-    imshow("ori", originImg1);
-    imshow("gray", grayImg1);
+    imshow("ori", originImg);
+    imshow("gray", grayImg);
     imshow("hsv", hsvImg);
     imshow("yuv", yuvImg);
 
-    imshow("binary", grayImg2);
+    imshow("greenImg", greenImg);
+    imshow("redImg", redImg1);
+    imshow("yellowImg", yellowImg);
+    imshow("white", whiteImg);
 
 
     if(waitKey(10) == 0){
