@@ -14,7 +14,6 @@ using namespace cv;
 int isShadow(Mat origin)
 {
   int x, y, cnt = 0;
-  char filename[30];
   Mat tmpImage; // 640 * 480
   cvtColor(origin, tmpImage,CV_BGR2YUV);
   imshow("yuv", tmpImage);
