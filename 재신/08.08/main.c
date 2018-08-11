@@ -392,11 +392,6 @@ void * capture_thread(void *arg)
     return NULL;
 }
 
-/**
-  * @brief  Hough transform the captured image dump and save to file
-  * @param  arg: pointer to parameter of thr_data
-  * @retval none
-  */
 void * capture_dump_thread(void *arg)
 {
     struct thr_data *data = (struct thr_data *)arg;

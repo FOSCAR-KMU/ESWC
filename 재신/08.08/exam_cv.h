@@ -15,7 +15,8 @@ int line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, 
 int enter_the_rotary(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh, float slope[]);
 int rotary_line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh, float slope[]);
 
-
+//추월차선
+int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh);
 
 #ifdef __cplusplus
 }
