@@ -79,8 +79,6 @@ int outbreak(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int n
       }
     }
 
-    // cvtColor(binaryImg, binaryImg1, CV_GRAY2BGR);
-    // resize(binaryImg1, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
     return redCount;
 
 }
@@ -118,7 +116,7 @@ int line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, 
     resize(resRGB, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
   }
   else if(modeNum == 2){
-    inRange(srcRGB(Rect(0, srcRGB.rows/3 * 2, srcRGB.cols, srcRGB.rows/3 * 2), HSV_WHITE_LOWER, HSV_WHITE_UPPER, binaryImg3);
+    inRange(srcRGB(Rect(0, srcRGB.rows/3 * 2, srcRGB.cols, srcRGB.rows/3 * 2)), HSV_WHITE_LOWER, HSV_WHITE_UPPER, binaryImg3);
     cvtColor(binaryImg3, binaryImg3, CV_GRAY2BGR);
     resize(binaryImg3, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
   }
@@ -178,7 +176,7 @@ int stop_line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* out
 
   int cnt = 0;
 
-  roiImg = srcRGB(Rect(0, srcRGB.rows/2, srcRGB.cols, srcRGB.rows/2));
+  roiImg = srcRGB(Rect(0, srcRGB.rows/3 * 2, srcRGB.cols, srcRGB.rows/3));
 
   cvtColor(roiImg, hsvImg, CV_BGR2HSV);
   inRange(hsvImg, HSV_WHITE_LOWER, HSV_WHITE_UPPER, binaryImg);
@@ -189,8 +187,9 @@ int stop_line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* out
     }
   }
 
-  cvtColor(binaryImg, binaryImg, CV_GRAY2BGR);
-  resize(binaryImg, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
+  // cvtColor(binaryImg, binaryImg, CV_GRAY2BGR);
+  // resize(binaryImg, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
+
   return cnt;
 }
 
