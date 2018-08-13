@@ -709,11 +709,11 @@ int main(int argc, char **argv)
   while(1){
       if(passing_lane_number == -1)
       {
-          printf("인...직실패\n");
+          printf("인식실패\n");
       }
       else
       {
-          printf("인...직%d\n",passing_lane_number);
+          printf("인식성공 차선 : %d\n",passing_lane_number);
       }
 
     // // 정지선 인식 = 로타리 시작전

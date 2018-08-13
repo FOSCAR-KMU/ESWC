@@ -156,7 +156,9 @@ int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* out
           if(binaryImg.at<uchar>(i, j) == 255) count[1]++;
       for(; j < binaryImg.cols ; j++)
           if(binaryImg.at<uchar>(i, j) == 255) count[2]++;
-  }     
+  }
+
+  resize(resRGB, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
 
   return count[0] > count[1] ? (count[0] > count[2] ? 0 : 2) : (count[1] > count[2] ? 1 : 2);
 }
@@ -892,7 +894,7 @@ pair<bool, vector<Point> > find_point_4_top_view(Mat srcImg){
 
   left_error = hough_left(cannyImg1, leftROI, &p1, &p2);
   right_error = hough_right(cannyImg2, rightROI, &p3, &p4);
-
+  
   if(!left_error && !right_error)
   {
     get_intersectpoint(p1, p2, Point(0, 0), Point(srcImg.cols, 0), &i_p1);
