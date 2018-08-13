@@ -1,10 +1,18 @@
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include <utility>
+#include <cmath>
+//#include "car_lib.h"
+#include <stdio.h>
 
 #define IMGYE 100
 #define IMGYE2 20
 #define IMGYE3 1000
+
+#define LEFT 1
+#define RIGHT 2
+
+#define PI 3.141592
 using namespace std;
 using namespace cv;
 
@@ -48,6 +56,8 @@ int main(){
     Point2f leftgreen;
     Point2f green;
 
+    int steering = 0;
+    
     for(;;){
         if(waitKey(30) >= 0) break;
         Mat frame, hsv, redBinaryImg, redBinaryImg1, yellowBinaryImg, greenBinaryImg, result, result1, result2;
@@ -133,7 +143,8 @@ int main(){
             cout << "leftgreen : " << leftgreen << '\n';
             
             if(differ < IMGYE3){
-                cout << "left 시발" <<'\n';
+                steering = LEFT;//좌
+                break;
             }
             
             differ = (green.x - greenCenter.x) * (green.x - greenCenter.x) + (green.y - greenCenter.y) * (green.y - greenCenter.y);
@@ -141,14 +152,40 @@ int main(){
             cout << "green : " << differ << '\n';
             
             if(differ < IMGYE3){
-                cout << "right 시발" <<'\n';
+                steering = RIGHT;
+                break;
             }
         }
+        
         //imshow("frame", frame);
         // imshow("binary", result);
-
-        
     }
+    
+   /*
+    for(;;){
+        if(waitKey(30) >= 0) break;
+        Mat yellowBinaryImg, hsv, frame;
+        
+        cap >> frame;
+        cvtColor(frame, hsv, COLOR_BGR2HSV);
+        inRange(hsv, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, yellowBinaryImg);
+        steering = LEFT;
+        if(steering == LEFT)
+            yellowBinaryImg = yellowBinaryImg(Rect(yellowBinaryImg.cols / 2, 0, yellowBinaryImg.cols / 2, yellowBinaryImg.rows));
+        else
+            yellowBinaryImg = yellowBinaryImg(Rect(0, 0, yellowBinaryImg.cols / 2, yellowBinaryImg.rows));
+        
+        vector<cv::Vec2f> lines;
+        HoughLines(yellowBinaryImg, lines, 1, PI/180, 130);
+        if(lines.empty())
+            continue;
+        
+        float theta = lines[0][1];
+        float slope = -1 / tan(theta);
+        cout << "slope : " << slope << '\n';
+        imshow("pandan", yellowBinaryImg);
+    }
+    */
     return 0;
 }
 
