@@ -135,11 +135,11 @@ int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* out
 
   roiImg = srcRGB(Rect(srcRGB.cols/3 * 2, 0, srcRGB.cols/3, srcRGB.rows));
 
-  pair<bool, vector<Point> > temp = find_point_4_top_view(roiImg);
+  // pair<bool, vector<Point> > temp = find_point_4_top_view(roiImg);
 
-  if(!temp.first) return -1;
+  // if(!temp.first) return -1;
 
-  topViewImg = top_view_transform(roiImg, temp.second);
+  // topViewImg = top_view_transform(roiImg, temp.second);
 
   cvtColor(roiImg, yuvImg, CV_BGR2YUV);
 
@@ -156,7 +156,9 @@ int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* out
           if(binaryImg.at<uchar>(i, j) == 255) count[1]++;
       for(; j < binaryImg.cols ; j++)
           if(binaryImg.at<uchar>(i, j) == 255) count[2]++;
-  }     
+  }
+
+  resize(resRGB, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
 
   return count[0] > count[1] ? (count[0] > count[2] ? 0 : 2) : (count[1] > count[2] ? 1 : 2);
 }
@@ -833,10 +835,10 @@ Mat top_view_transform(Mat img, vector<Point> four_point)
   Point2f R[2];
 
   Point2f src_vertices[4];
-  L[0] = Point(660, 430);
-  L[1] = Point(0, 742);
-  R[0] = Point(870, 444);
-  R[1] = Point(1400, 740);
+  L[0] = four_point[0];
+  L[1] = four_point[1];
+  R[0] = four_point[2];
+  R[1] = four_point[3];
 
   float diff0 = R[0].x - L[0].x;
   float diff1 = R[1].x - L[1].x;
@@ -877,11 +879,14 @@ pair<bool, vector<Point> > find_point_4_top_view(Mat srcImg){
   leftROI  = srcImg(Rect(0, srcImg.rows/2, srcImg.cols/2, srcImg.rows/2));
   rightROI = srcImg(Rect(srcImg.cols/2, srcImg.rows/2, srcImg.cols/2, srcImg.rows/2));
 
-  cvtColor(leftROI, yuvImg1, CV_BGR2YUV);
-  cvtColor(rightROI, yuvImg2, CV_BGR2YUV);
+  // cvtColor(leftROI, yuvImg1, CV_BGR2YUV);
+  // cvtColor(rightROI, yuvImg2, CV_BGR2YUV);
 
-  inRange(yuvImg1, YUV_LOWER, YUV_UPPER, binaryImg1);
-  inRange(yuvImg2, YUV_LOWER, YUV_UPPER, binaryImg2);
+  // inRange(yuvImg1, YUV_LOWER, YUV_UPPER, binaryImg1);
+  // inRange(yuvImg2, YUV_LOWER, YUV_UPPER, binaryImg2);
+
+  threshold(leftROI,  binaryImg1, 120, 255, CV_THRESH_BINARY);
+  threshold(rightROI, binaryImg2, 120, 255, CV_THRESH_BINARY);
 
 
   Canny(binaryImg1, cannyImg1, 150, 250);
@@ -889,7 +894,7 @@ pair<bool, vector<Point> > find_point_4_top_view(Mat srcImg){
 
   left_error = hough_left(cannyImg1, leftROI, &p1, &p2);
   right_error = hough_right(cannyImg2, rightROI, &p3, &p4);
-
+  
   if(!left_error && !right_error)
   {
     get_intersectpoint(p1, p2, Point(0, 0), Point(srcImg.cols, 0), &i_p1);
