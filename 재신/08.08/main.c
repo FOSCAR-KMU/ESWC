@@ -672,35 +672,35 @@ int main(int argc, char **argv)
   CameraXServoControl_Write(angle);
   CameraYServoControl_Write(cameraY);
 
-  SpeedControlOnOff_Write(CONTROL);   // speed controller must be also ON !!!
-  speed = 50; // speed set     --> speed must be set when using position controller
-  DesireSpeed_Write(speed);
+//   SpeedControlOnOff_Write(CONTROL);   // speed controller must be also ON !!!
+//   speed = 50; // speed set     --> speed must be set when using position controller
+//   DesireSpeed_Write(speed);
 
-  //control on/off
-  status = PositionControlOnOff_Read();
-  printf("PositionControlOnOff_Read() = %d\n", status);
-  PositionControlOnOff_Write(CONTROL);
+//   //control on/off
+//   status = PositionControlOnOff_Read();
+//   printf("PositionControlOnOff_Read() = %d\n", status);
+//   PositionControlOnOff_Write(CONTROL);
 
-  //speed controller gain set(PID제어)
-  //P-gain
-  gain = SpeedPIDProportional_Read();        // default value = 10, range : 1~50
-  printf("SpeedPIDProportional_Read() = %d \n", gain);
-  gain = 20;
-  SpeedPIDProportional_Write(gain);
+//   //speed controller gain set(PID제어)
+//   //P-gain
+//   gain = SpeedPIDProportional_Read();        // default value = 10, range : 1~50
+//   printf("SpeedPIDProportional_Read() = %d \n", gain);
+//   gain = 20;
+//   SpeedPIDProportional_Write(gain);
 
-  //I-gain
-  gain = SpeedPIDIntegral_Read();        // default value = 10, range : 1~50
-  printf("SpeedPIDIntegral_Read() = %d \n", gain);
-  gain = 20;
-  SpeedPIDIntegral_Write(gain);
+//   //I-gain
+//   gain = SpeedPIDIntegral_Read();        // default value = 10, range : 1~50
+//   printf("SpeedPIDIntegral_Read() = %d \n", gain);
+//   gain = 20;
+//   SpeedPIDIntegral_Write(gain);
 
-  //D-gain
-  gain = SpeedPIDDifferential_Read();        // default value = 10, range : 1~50
-  printf("SpeedPIDDefferential_Read() = %d \n", gain);
-  gain = 20;
-  SpeedPIDDifferential_Write(gain);
+//   //D-gain
+//   gain = SpeedPIDDifferential_Read();        // default value = 10, range : 1~50
+//   printf("SpeedPIDDefferential_Read() = %d \n", gain);
+//   gain = 20;
+//   SpeedPIDDifferential_Write(gain);
 
-  PositionControlOnOff_Write(UNCONTROL);
+//   PositionControlOnOff_Write(UNCONTROL);
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -709,7 +709,11 @@ int main(int argc, char **argv)
   while(1){
       if(passing_lane_number == -1)
       {
-          
+          printf("인...직실패\n");
+      }
+      else
+      {
+          printf("인...직%d\n",passing_lane_number);
       }
 
     // // 정지선 인식 = 로타리 시작전

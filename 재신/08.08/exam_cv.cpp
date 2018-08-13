@@ -877,11 +877,14 @@ pair<bool, vector<Point> > find_point_4_top_view(Mat srcImg){
   leftROI  = srcImg(Rect(0, srcImg.rows/2, srcImg.cols/2, srcImg.rows/2));
   rightROI = srcImg(Rect(srcImg.cols/2, srcImg.rows/2, srcImg.cols/2, srcImg.rows/2));
 
-  cvtColor(leftROI, yuvImg1, CV_BGR2YUV);
-  cvtColor(rightROI, yuvImg2, CV_BGR2YUV);
+  // cvtColor(leftROI, yuvImg1, CV_BGR2YUV);
+  // cvtColor(rightROI, yuvImg2, CV_BGR2YUV);
 
-  inRange(yuvImg1, YUV_LOWER, YUV_UPPER, binaryImg1);
-  inRange(yuvImg2, YUV_LOWER, YUV_UPPER, binaryImg2);
+  // inRange(yuvImg1, YUV_LOWER, YUV_UPPER, binaryImg1);
+  // inRange(yuvImg2, YUV_LOWER, YUV_UPPER, binaryImg2);
+
+  threshold(leftROI,  binaryImg1, 120, 255, CV_THRESH_BINARY);
+  threshold(rightROI, binaryImg2, 120, 255, CV_THRESH_BINARY);
 
 
   Canny(binaryImg1, cannyImg1, 150, 250);
