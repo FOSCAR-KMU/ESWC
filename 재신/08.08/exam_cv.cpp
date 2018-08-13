@@ -135,11 +135,11 @@ int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* out
 
   roiImg = srcRGB(Rect(srcRGB.cols/3 * 2, 0, srcRGB.cols/3, srcRGB.rows));
 
-  pair<bool, vector<Point> > temp = find_point_4_top_view(roiImg);
+  // pair<bool, vector<Point> > temp = find_point_4_top_view(roiImg);
 
-  if(!temp.first) return -1;
+  // if(!temp.first) return -1;
 
-  topViewImg = top_view_transform(roiImg, temp.second);
+  // topViewImg = top_view_transform(roiImg, temp.second);
 
   cvtColor(roiImg, yuvImg, CV_BGR2YUV);
 
