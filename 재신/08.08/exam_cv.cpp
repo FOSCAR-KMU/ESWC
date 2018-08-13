@@ -833,10 +833,10 @@ Mat top_view_transform(Mat img, vector<Point> four_point)
   Point2f R[2];
 
   Point2f src_vertices[4];
-  L[0] = Point(660, 430);
-  L[1] = Point(0, 742);
-  R[0] = Point(870, 444);
-  R[1] = Point(1400, 740);
+  L[0] = four_point[0];
+  L[1] = four_point[1];
+  R[0] = four_point[2];
+  R[1] = four_point[3];
 
   float diff0 = R[0].x - L[0].x;
   float diff1 = R[1].x - L[1].x;

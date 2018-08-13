@@ -341,7 +341,7 @@ void * capture_thread(void *arg)
             choosing_lane(vpe->disp, capt);
         }
         else {
-            
+            printf("인직완료\n");
         }
 
 
