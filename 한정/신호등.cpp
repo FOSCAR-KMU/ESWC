@@ -57,7 +57,7 @@ int main(){
     Point2f green;
 
     int steering = 0;
-    
+    /*
     for(;;){
         if(waitKey(30) >= 0) break;
         Mat frame, hsv, redBinaryImg, redBinaryImg1, yellowBinaryImg, greenBinaryImg, result, result1, result2;
@@ -161,7 +161,7 @@ int main(){
         // imshow("binary", result);
     }
     
-   /*
+   */
     for(;;){
         if(waitKey(30) >= 0) break;
         Mat yellowBinaryImg, hsv, frame;
@@ -181,11 +181,10 @@ int main(){
             continue;
         
         float theta = lines[0][1];
-        float slope = -1 / tan(theta);
+        float float slope = -1 / tan(theta);
         cout << "slope : " << slope << '\n';
         imshow("pandan", yellowBinaryImg);
     }
-    */
     return 0;
 }
 

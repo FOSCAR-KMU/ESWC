@@ -359,7 +359,7 @@ int LaneCheck(){
 int main(){
     //흰선으로중앙맞추기();
     int go = LaneCheck();
-
+    
     cout << LaneCheck() << endl;
     //없는차선의장애물y값까지이동();
     //앞에노란선을검출해서흰선정지선까지움지경();
