@@ -878,7 +878,7 @@ int verticalParking(){
     }
 
 
-    if(distance_sensor[4] < 20){ //4번 센서랑 벽까지 거리가 20미만 이면 가운데 맞추면서 나옴
+    if(distance_sensor[4] < 30){ //4번 센서랑 벽까지 거리가 20미만 이면 가운데 맞추면서 나옴
       int data1 = DistanceSensor(3);
       int volt1 = data_transform(data, 0 , 4095 , 0 , 5000);
       int debug1 = (27.61 / (volt - 0.1696))*1000;
@@ -909,10 +909,7 @@ int verticalParking(){
 
 
     }
-    else if(distance_sensor[4] >= 20 && distance_sensor[4] <= 30){
 
-      angle = 1520;
-    }
     else if( distance_sensor[4] > 30 ){ //30보다 커지면 오른쪽 최대조향
       angle = 1000;
       SteeringServoControl_Write(angle);
