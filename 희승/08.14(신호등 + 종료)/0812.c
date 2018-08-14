@@ -107,6 +107,7 @@ volatile int traffic_light_flag = 0; // 8
 // 2 : 우회전
 // 3 : 초록색 인식 했지만 1.5 ~ 2.5배 벗어남
 // 4 : 신호등 진입 끝
+// 5 : 정지선 인식
 // -1 : 판단전
 // -2 : 빨간색 판단 전
 // -3 : 노란색 판단 전
@@ -423,6 +424,10 @@ void * capture_thread(void *arg)
 
         //////////////////////////미션 실행 함수들////////////////////////////
         switch(mode) {
+          case -1 :
+            driveOnOff = 0; //최종 정지선 인식 후
+            driveOnOff = 1;
+            break;
           case 1 :  // 출발 및 도로주행
             break;
           case 2 :  // 고가도로 구간
@@ -1188,9 +1193,9 @@ void leftRotate(){
 
   int data = DistanceSensor(1);
   int volt = data_transform(data, 0 , 4095 , 0 , 5000);
-  int distance = (27.61 / (volt - 0.1696))*1000;
+  int distance = (27.61 / (volt - 0.1696)) * 1000;
 
-  if(distance < 40)    SteeringServoControl_Write(2000);
+  if(distance < 30)    SteeringServoControl_Write(1800);
   else traffic_light_flag = 4;
 
 }
@@ -1202,9 +1207,9 @@ void rightRotate(){
 
   int data = DistanceSensor(1);
   int volt = data_transform(data, 0 , 4095 , 0 , 5000);
-  int distance = (27.61 / (volt - 0.1696))*1000;
+  int distance = (27.61 / (volt - 0.1696)) * 1000;
 
-  if(distance < 40)    SteeringServoControl_Write(1000);
+  if(distance < 30)    SteeringServoControl_Write(1200);
   else traffic_light_flag = 4;
 
 }
@@ -1251,6 +1256,7 @@ void mode_traffic_light(){
 
       if(flag >= 3){
         printf("LineSensor_Read() = STOP! \n");
+        traffic_light_flag = 5;
         finish_flag = 1; //정지선 인식
         mode = -1;
       }
@@ -1451,6 +1457,8 @@ int main(int argc, char **argv)
 
     if(finish_flag == 1){
       printf("...finish...\n");
+      SteeringServoControl_Write(1520);
+
       usleep(1000000);
       speed = 0;
       DesireSpeed_Write(speed);
