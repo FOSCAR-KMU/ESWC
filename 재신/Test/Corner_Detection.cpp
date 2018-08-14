@@ -10,25 +10,25 @@ const Vec3b HSV_YELLOW_UPPER = Vec3b(50, 255, 255);
 
 int main()
 {
-    VideoCapture capture(0);
+    VideoCapture capture(1);
     Mat frame;
 
     while(1)
     {
         capture >> frame;
 
-        Mat grayImg;
+        Mat hsvImg;
         
-        cvtColor(frame, grayImg, CV_BGR2GRAY);
+        cvtColor(frame, hsvImg, CV_BGR2HSV);
 
         Mat binImg;
-        // inRange(frame, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, binImg);
-        threshold(grayImg, binImg, 150, 255, THRESH_BINARY);
+        inRange(hsvImg, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, binImg);
+        // threshold(grayImg, binImg, 150, 255, THRESH_BINARY);
         
         int blockSize = 2;
         int apertureSize = 3;
-        double k = 0.04;
-        float thresh = 200;
+        double k = 0.06;
+        float thresh = 250;
 
         Mat harrisImg, harrisImg_norm, harrisImg_norm_scaled;
 
