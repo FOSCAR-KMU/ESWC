@@ -223,6 +223,50 @@ int enter_the_rotary(unsigned char* srcBuf, int iw, int ih, unsigned char* outBu
 
 }
 
+int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh){
+  Mat srcRGB(ih, iw, CV_8UC3, srcBuf); //input
+  Mat dstRGB(nh, nw, CV_8UC3, outBuf); //output
+
+  Mat resRGB(ih, iw, CV_8UC3); //result
+
+  Mat roiImg;
+  Mat yuvImg;
+  Mat binaryImg;
+  Mat topViewImg;
+
+  int cnt = 0;
+  bool flag;
+
+  roiImg = srcRGB(Rect(srcRGB.cols/3 * 2, 0, srcRGB.cols/3, srcRGB.rows));
+
+  // pair<bool, vector<Point> > temp = find_point_4_top_view(roiImg);
+
+  // if(!temp.first) return -1;
+
+  // topViewImg = top_view_transform(roiImg, temp.second);
+
+  cvtColor(roiImg, yuvImg, CV_BGR2YUV);
+
+  inRange(yuvImg, YUV_LOWER, YUV_UPPER, binaryImg);
+
+  int count[3] = {0, };
+
+  for(int i = 0 ; i < binaryImg.rows ; i++)
+  {
+      int j;
+      for(j = 0 ; j < binaryImg.cols / 3 ; j++)
+          if(binaryImg.at<uchar>(i, j) == 255) count[0]++;
+      for(; j < binaryImg.cols * 2 / 3 ; j++)
+          if(binaryImg.at<uchar>(i, j) == 255) count[1]++;
+      for(; j < binaryImg.cols ; j++)
+          if(binaryImg.at<uchar>(i, j) == 255) count[2]++;
+  }
+
+  resize(resRGB, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
+
+  return count[0] > count[1] ? (count[0] > count[2] ? 0 : 2) : (count[1] > count[2] ? 1 : 2);
+}
+
 
 }
 

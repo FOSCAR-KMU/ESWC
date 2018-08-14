@@ -17,6 +17,8 @@ int stop_line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* out
 //회전교차로 진입전 차량 그림자 확인 함수
 int enter_the_rotary(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh);
 
+// 추월 차선 확인
+int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh);
 
 #ifdef __cplusplus
 }

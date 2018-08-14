@@ -129,7 +129,7 @@ volatile int tunnel_flag = 0; // 6
 // 1 : 터널 주행 중
 // 2 : 터널 탈출 후
 
-volatile int passing_lane_flag = -1; // 7
+volatile int passing_lane_number = -1; // 7
 // -1 : 추월차선 진입 전
 //  0 : 차선 판단중
 //  1 : 왼쪽 차선으로 진행 가능
@@ -346,7 +346,7 @@ static void drive(struct display *disp, struct buffer *cambuf)
         //drive mode
         //1 : normal drive
         //2 : rotary drive
-        if(rotary_flag == 2 || passing_lane_flag == 0){
+        if(rotary_flag == 2 || passing_lane_number == 0){
           temp_angle = line_detector(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, slope, 2);
           stop_line_count = stop_line_detector(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H);
 
@@ -374,6 +374,26 @@ static void rotary_enter(struct display *disp, struct buffer *cambuf)
         gettimeofday(&st, NULL);
 
         rotary_enter_count = enter_the_rotary(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H);
+
+        gettimeofday(&et, NULL);
+        optime = ((et.tv_sec - st.tv_sec)*1000)+ ((int)et.tv_usec/1000 - (int)st.tv_usec/1000);
+        draw_operatingtime(disp, optime);
+    }
+}
+
+static void passing_lane_check(struct display *disp, struct buffer *cambuf)
+{
+    unsigned char srcbuf[VPE_OUTPUT_W*VPE_OUTPUT_H*3];
+    uint32_t optime;
+    struct timeval st, et;
+
+    unsigned char* cam_pbuf[4];
+    if(get_framebuf(cambuf, cam_pbuf) == 0) {
+        memcpy(srcbuf, cam_pbuf[0], VPE_OUTPUT_W*VPE_OUTPUT_H*3);
+
+        gettimeofday(&st, NULL);
+
+        passing_lane_number = passing_lane_check(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H) + 1;
 
         gettimeofday(&et, NULL);
         optime = ((et.tv_sec - st.tv_sec)*1000)+ ((int)et.tv_usec/1000 - (int)st.tv_usec/1000);
@@ -472,7 +492,10 @@ void * capture_thread(void *arg)
             break;
           case 7 :  // 추월 차선
             driveOnOff = 1;
-            if()
+            if(passing_lane_number == 0) {
+              driveOnOff = 0;
+              passing_lane_check(vpe->disp, capt);
+            }
             break;
           case 8 : // 신호등
             break;
@@ -1469,13 +1492,18 @@ int is_passing_lane()
 void mode_passing_lane()
 {
   printf("Passing Lane Mode\n");
-  if(passing_lane_flag == -1)
+  if(passing_lane_number == -1)
   {
-    passing_lane_flag = is_passing_lane();
+    passing_lane_number = is_passing_lane();
+    driveOnOff = 0;
   }
-  else if(passing_lane_flag == 0)
+  else if(passing_lane_number == 0)
   {
-    
+    printf("판별중...\n");
+  }
+  else
+  {
+    printf("%d으로 가자!\n", passing_lane_number);
   }
 }
 
