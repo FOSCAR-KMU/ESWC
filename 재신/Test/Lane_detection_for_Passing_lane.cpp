@@ -68,77 +68,15 @@ void TopView(Mat &src, Mat &dst){
 }
 
 int main(){
-    Mat img = imread("차있는사진.JPG");
-    resize(img, img, Size(WIDTH, HEIGHT), 0, 0, CV_INTER_LINEAR);
+    Mat srcRGB = imread("차있는사진.JPG");
 
-    //Mat img(HEIGHT, WIDTH, CV_8UC3);
-    //TopView(img2, img);
-    imshow("Original",img);
-    Rect rect(0, HEIGHT * 2 / 3, WIDTH, HEIGHT/3);
-    Mat roi = img(rect);
+    resize(srcRGB, srcRGB, Size(640, 480), 0, 0, CV_INTER_LINEAR);
 
-    imshow("ROI", roi);
+    Mat roiImg;
 
-    Mat gray;
-    cvtColor(roi, gray, COLOR_BGR2GRAY);
+    roiImg = srcRGB(Rect(0, srcRGB.rows/3, srcRGB.cols, srcRGB.rows / 3 * 2));
 
-    Mat bin;
-    threshold(gray, bin, 150, 255, THRESH_BINARY);    
-    imshow("Bin", bin);
-
-    Mat edges;
-    Canny(gray, edges, 250, 500);
-    imshow("Edges",edges);
-    vector<cv::Vec2f> lines;
-    HoughLines(edges, lines, 1, PI/180, 130);
+    imshow("adsf", roiImg);
     
-    // 선 그리기
-    cv::Mat result(edges.rows, edges.cols, CV_8U, cv::Scalar(255));
-    std::cout << "Lines detected: " << lines.size() << std::endl;
-
-    vector<Point2f> result_point;
-    // 선 벡터를 반복해 선 그리기
-    std::vector<cv::Vec2f>::const_iterator it= lines.begin();
-    while (it!=lines.end()) {
-        float rho = (*it)[0];   // 첫 번째 요소는 rho 거리
-        float theta = (*it)[1]; // 두 번째 요소는 델타 각도
-        Point pt1;
-        Point pt2;
-        if (theta < PI/4. || theta > 3.*PI/4.) { // 수직 행
-            pt1 = Point(rho/cos(theta), 0); // 첫 행에서 해당 선의 교차점   
-            pt2 = Point((rho-result.rows*sin(theta))/cos(theta), result.rows);
-            // 마지막 행에서 해당 선의 교차점
-            cv::line(roi, pt1, pt2, cv::Scalar(255), 1); // 하얀 선으로 그리기
-        } else { // 수평 행
-            pt1 = Point(0,rho/sin(theta)); // 첫 번째 열에서 해당 선의 교차점  
-            pt2 = Point(result.cols,(rho-result.cols*cos(theta))/sin(theta));
-            // 마지막 열에서 해당 선의 교차점
-            cv::line(roi, pt1, pt2, cv::Scalar(255), 1); // 하얀 선으로 그리기
-        }
-        std::cout << "line: (" << pt1 << "," << pt2 << ")\n";
-        result_point.push_back(pt1);
-        result_point.push_back(pt2);
-        ++it;
-    }
-
-
-    Mat labels, centers;
-    kmeans(result_point, 4, labels,
-  				TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 10, 1.0),
-  				3, KMEANS_RANDOM_CENTERS, centers);
-
-    for(int i = 0 ; i < 4 ; i++)
-    {
-        Point mypt = centers.at<Point2f>(i,0);
-        cout << mypt.x << ' ' << mypt.y << endl;
-    }
-
-    imshow("Lines",img);
-    
-    int k = waitKey(0);
-    if (k == 27) {       // wait for ESC key to exit
-        destroyAllWindows();
-    }
-
-    return 0;
+    if(waitKey(0) == 1);
 }

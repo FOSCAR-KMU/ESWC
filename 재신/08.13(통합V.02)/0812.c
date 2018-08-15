@@ -48,7 +48,7 @@
 volatile bool cameraOnOff = 0;
 volatile bool driveOnOff = 0;
 
-volatile int mode = 1;
+volatile int mode = 7;
 
 // 1 	출발
 
@@ -197,7 +197,7 @@ void mode_tunnel();
 
 //////////////////////////추월 차선/////////////////////////////////
 
-void is_passing_lane();
+int is_passing_lane();
 
 ///////////////////////////////////////////////////////////////////
 
@@ -381,7 +381,7 @@ static void rotary_enter(struct display *disp, struct buffer *cambuf)
     }
 }
 
-static void passing_lane_check(struct display *disp, struct buffer *cambuf)
+static void passing_lane_decision(struct display *disp, struct buffer *cambuf)
 {
     unsigned char srcbuf[VPE_OUTPUT_W*VPE_OUTPUT_H*3];
     uint32_t optime;
@@ -491,10 +491,10 @@ void * capture_thread(void *arg)
             if(tunnel_flag == 1) driveOnOff = 0;
             break;
           case 7 :  // 추월 차선
-            driveOnOff = 1;
+            driveOnOff = 0;
             if(passing_lane_number == 0) {
               driveOnOff = 0;
-              passing_lane_check(vpe->disp, capt);
+              passing_lane_decision(vpe->disp, capt);
             }
             break;
           case 8 : // 신호등
@@ -1654,7 +1654,7 @@ int main(int argc, char **argv)
 // 7 	차로 추월 구간
 // 8 	신호등 분기점 코스
 
-  // cameraOnOff = 1;
+  cameraOnOff = 1;
   // driveOnOff = 1;
 
   while(1){

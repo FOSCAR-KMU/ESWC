@@ -237,7 +237,7 @@ int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* out
   int cnt = 0;
   bool flag;
 
-  roiImg = srcRGB(Rect(srcRGB.cols/3 * 2, 0, srcRGB.cols/3, srcRGB.rows));
+  roiImg = srcRGB(Rect(0, srcRGB.rows/3, srcRGB.cols, srcRGB.rows / 3 * 2));
 
   // pair<bool, vector<Point> > temp = find_point_4_top_view(roiImg);
 
@@ -253,16 +253,21 @@ int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* out
 
   for(int i = 0 ; i < binaryImg.rows ; i++)
   {
-      int j;
-      for(j = 0 ; j < binaryImg.cols / 3 ; j++)
-          if(binaryImg.at<uchar>(i, j) == 255) count[0]++;
-      for(; j < binaryImg.cols * 2 / 3 ; j++)
-          if(binaryImg.at<uchar>(i, j) == 255) count[1]++;
-      for(; j < binaryImg.cols ; j++)
-          if(binaryImg.at<uchar>(i, j) == 255) count[2]++;
+    int j;
+    for(j = 0 ; j < binaryImg.cols / 3 ; j++)
+      if(binaryImg.at<uchar>(i, j) == 255) count[0]++;
+    for(; j < binaryImg.cols * 2 / 3 ; j++)
+      if(binaryImg.at<uchar>(i, j) == 255) count[1]++;
+    for(; j < binaryImg.cols ; j++)
+      if(binaryImg.at<uchar>(i, j) == 255) count[2]++;
   }
 
-  resize(resRGB, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
+    cvtColor(binaryImg, binaryImg, CV_GRAY2BGR);
+
+
+  resize(binaryImg, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
+
+  if(count[0] + count[1] + count[2] < 1000) return -1;
 
   return count[0] > count[1] ? (count[0] > count[2] ? 0 : 2) : (count[1] > count[2] ? 1 : 2);
 }
