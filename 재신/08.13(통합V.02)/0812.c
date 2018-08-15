@@ -346,7 +346,7 @@ static void drive(struct display *disp, struct buffer *cambuf)
         //drive mode
         //1 : normal drive
         //2 : rotary drive
-        if(rotary_flag == 2 || passing_lane_number == 0){
+        if(rotary_flag == 2 || (passing_lane_number == -1 && mode == 7)){
           temp_angle = line_detector(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, slope, 2);
           stop_line_count = stop_line_detector(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H);
 
@@ -491,7 +491,6 @@ void * capture_thread(void *arg)
             if(tunnel_flag == 1) driveOnOff = 0;
             break;
           case 7 :  // 추월 차선
-            driveOnOff = 0;
             if(passing_lane_number == 0) {
               driveOnOff = 0;
               passing_lane_decision(vpe->disp, capt);
@@ -1495,15 +1494,28 @@ void mode_passing_lane()
   if(passing_lane_number == -1)
   {
     passing_lane_number = is_passing_lane();
-    driveOnOff = 0;
   }
   else if(passing_lane_number == 0)
   {
+    driveOnOff = 0;
+    CameraYServoControl_Write(1500);
     printf("판별중...\n");
   }
   else
   {
     printf("%d으로 가자!\n", passing_lane_number);
+    CameraYServoControl_Write(1650);
+    switch(passing_lane_number)
+    {
+      case 1 :
+        
+        break;
+      case 2 :
+        break;
+      case 3 :
+
+        break;
+    }
   }
 }
 
