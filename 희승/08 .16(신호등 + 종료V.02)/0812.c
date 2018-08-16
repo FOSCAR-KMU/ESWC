@@ -297,9 +297,7 @@ static void trafficLightMission(struct display *disp, struct buffer *cambuf)
 
         gettimeofday(&st, NULL);
 
-        if(traffic_light_flag < 1){
-          traffic_light_flag = traffic_light(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, centerP);
-        }
+        traffic_light_flag = traffic_light(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, centerP);
 
         gettimeofday(&et, NULL);
         optime = ((et.tv_sec - st.tv_sec)*1000)+ ((int)et.tv_usec/1000 - (int)st.tv_usec/1000);
@@ -459,9 +457,7 @@ void * capture_thread(void *arg)
             if(traffic_light_flag < 1){
               trafficLightMission(vpe->disp, capt);
             }
-            else if(traffic_light_flag == 4){
-              driveOnOff = 1;
-            }
+
             break;
         }
         if(driveOnOff)
@@ -1188,34 +1184,77 @@ void mode_tunnel()
 
 void leftRotate(){
 
-  speed = 50;
-  DesireSpeed_Write(speed);
 
   int data = DistanceSensor(1);
   int volt = data_transform(data, 0 , 4095 , 0 , 5000);
   int distance = (27.61 / (volt - 0.1696)) * 1000;
 
-  if(distance < 30)    SteeringServoControl_Write(1800);
-  else traffic_light_flag = 4;
+  printf("%d\n", distance);
+
+  if(distance < 50){
+
+    SteeringServoControl_Write(2000);
+    while(1){
+      int data1 = DistanceSensor(3);
+      int volt1 = data_transform(data1, 0 , 4095 , 0 , 5000);
+      int distance1 = (27.61 / (volt1 - 0.1696)) * 1000;
+
+      if(distance1 < 50){
+
+        break;
+
+      }
+
+    }
+
+    traffic_light_flag = 4;
+    SteeringServoControl_Write(1800);
+
+
+  }
+
 
 }
 
 void rightRotate(){
 
-  speed = 50;
-  DesireSpeed_Write(speed);
 
   int data = DistanceSensor(1);
   int volt = data_transform(data, 0 , 4095 , 0 , 5000);
   int distance = (27.61 / (volt - 0.1696)) * 1000;
 
-  if(distance < 30)    SteeringServoControl_Write(1200);
-  else traffic_light_flag = 4;
+  printf("%d\n", distance);
+
+  if(distance < 50){
+
+    SteeringServoControl_Write(1000);
+
+    while(1){
+      int data1 = DistanceSensor(5);
+      int volt1 = data_transform(data1, 0 , 4095 , 0 , 5000);
+      int distance1 = (27.61 / (volt1 - 0.1696)) * 1000;
+
+      if(distance1 < 50) {
+        break;
+      }
+
+    }
+
+    traffic_light_flag = 4;
+
+    SteeringServoControl_Write(1200);
+
+
+
+  }
 
 }
 
 
 void mode_traffic_light(){
+
+  printf("flag %d\n", traffic_light_flag);
+
 
   if(traffic_light_flag == 0){
     speed = 0; // speed set     --> speed must be set when using position controller
@@ -1226,12 +1265,12 @@ void mode_traffic_light(){
     printf("green : %d, %d", centerP[4], centerP[5]);
   }
   else if(traffic_light_flag == 1){
-    speed = 50;
+    speed = 30;
     DesireSpeed_Write(speed);
     leftRotate();
   }
   else if(traffic_light_flag == 2){
-    speed = 50;
+    speed = 30;
     DesireSpeed_Write(speed);
     rightRotate();
   }
@@ -1252,11 +1291,14 @@ void mode_traffic_light(){
       }
 
       printf("\n");
-      printf("flag : %d\n", flag);
+      // printf("flag : %d\n", flag);
 
       if(flag >= 3){
         printf("LineSensor_Read() = STOP! \n");
         traffic_light_flag = 5;
+
+        SteeringServoControl_Write(1520);
+
         finish_flag = 1; //정지선 인식
         mode = -1;
       }
@@ -1265,7 +1307,6 @@ void mode_traffic_light(){
   }
 
 
-  printf("flag %d\n", traffic_light_flag);
 
 
 
@@ -1281,6 +1322,15 @@ int main(int argc, char **argv)
   int disp_argc = 3;
   char* disp_argv[] = {"dummy", "-s", "4:480x272", "\0"}; // ���� ���� ���� Ȯ�� �� ó��..
   int ret = 0;
+
+  CarControlInit();
+
+  cameraY = 1630;
+  SteeringServoControl_Write(angle);
+  CameraXServoControl_Write(angle);
+  CameraYServoControl_Write(cameraY);
+
+  usleep(3000000);
 
 
   tdata.dump_state = DUMP_NONE;
@@ -1369,12 +1419,9 @@ int main(int argc, char **argv)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-  CarControlInit();
 
-  cameraY = 1630;
-  SteeringServoControl_Write(angle);
-  CameraXServoControl_Write(angle);
-  CameraYServoControl_Write(cameraY);
+
+
 
   SpeedControlOnOff_Write(CONTROL);   // speed controller must be also ON !!!
   speed = 0; // speed set     --> speed must be set when using position controller
@@ -1420,7 +1467,6 @@ int main(int argc, char **argv)
   cameraOnOff = 1;
   // driveOnOff = 1;
 
-  usleep(3000000);
 
   while(1){
 
@@ -1459,7 +1505,7 @@ int main(int argc, char **argv)
       printf("...finish...\n");
       SteeringServoControl_Write(1520);
 
-      usleep(1000000);
+      usleep(2500000);
       speed = 0;
       DesireSpeed_Write(speed);
       break;
