@@ -50,36 +50,6 @@ volatile bool driveOnOff = 0;
 
 volatile int mode = 8;
 
-// 1 	출발
-
-// 2 	고가도로 구간 +	돌발(내리막) 구간
-// -> 터널 주행 코드
-//////////////////////////////
-
-// 3  우선정지 장애물 구간 (위치 랜덤)
-// -> 차선인색 + 우선정지 장애
-
-// 4	수평주차
-// -> 차선인식 + 주차
-
-// 5  수직주차 (위치랜덤)
-// -> 차선인식 + 주차
-
-// 주차끝나면
-
-// -> 차선인식
-// -> 정지선 인식(영상처리코드)
-// -> 정지선 인식(라인센서)
-
-// 6 	회전 교차로
-// -> 진입전 -> 진입 후 주행 -> 종료
-/////////////////////////////////
-
-// 7 	터널 코스
-
-// 8 	차로 추월 구간
-
-// 9 	신호등 분기점 코스
 
 //////////////// 변수 /////////////////
 unsigned char status;
@@ -135,7 +105,17 @@ volatile int traffic_light_flag = 0; // 8
 // 0 : 신호등 인식 전
 // 1 : 좌회전
 // 2 : 우회전
+// 3 : 초록색 인식 했지만 1.5 ~ 2.5배 벗어남
+// 4 : 신호등 진입 끝
+// 5 : 정지선 인식
 // -1 : 판단전
+// -2 : 빨간색 판단 전
+// -3 : 노란색 판단 전
+// -4 : 초록색 판단 전
+
+volatile int finish_flag = 0;
+// 0 : 진행중
+// 1 : 모든 미션 끝, 주행 완료
 
 
 volatile float slope[2] = {};
@@ -250,13 +230,6 @@ static int allocate_input_buffers(struct thr_data *data)
     return 0;
 }
 
-/**
-  * @brief  Free vpe input buffer and destroy a buffer object
-  * @param  buffer: pointer to parameter of buffer object
-                  n : count of buffer object
-                  bmultiplanar : multipanar value of buffer object
-  * @retval none
-  */
 static void free_input_buffers(struct buffer **buffer, uint32_t n, bool bmultiplanar)
 {
     uint32_t i;
@@ -273,12 +246,6 @@ static void free_input_buffers(struct buffer **buffer, uint32_t n, bool bmultipl
     free(buffer);
 }
 
-/**
-  * @brief  Draw operating time to overlay buffer.
-  * @param  disp: pointer to parameter of struct display
-                  time : operate time (ms)
-  * @retval none
-  */
 static void draw_operatingtime(struct display *disp, uint32_t time)
 {
     FrameBuffer tmpFrame;
@@ -297,14 +264,6 @@ static void draw_operatingtime(struct display *disp, uint32_t time)
         drawString(&tmpFrame, strtime, TIME_TEXT_X, TIME_TEXT_Y, 0, TIME_TEXT_COLOR);
     }
 }
-
-/**
-  * @brief  Handle houht transform with opencv api
-  * @param  disp: pointer to parameter of struct display
-                 cambuf: vpe output buffer that converted capture image
-  * @retval none
-  */
-
 
 static void outBreakMission(struct display *disp, struct buffer *cambuf)
 {
@@ -338,9 +297,7 @@ static void trafficLightMission(struct display *disp, struct buffer *cambuf)
 
         gettimeofday(&st, NULL);
 
-        if(traffic_light_flag < 1){
-          traffic_light_flag = traffic_light(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, centerP);
-        }
+        traffic_light_flag = traffic_light(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, centerP);
 
         gettimeofday(&et, NULL);
         optime = ((et.tv_sec - st.tv_sec)*1000)+ ((int)et.tv_usec/1000 - (int)st.tv_usec/1000);
@@ -465,6 +422,10 @@ void * capture_thread(void *arg)
 
         //////////////////////////미션 실행 함수들////////////////////////////
         switch(mode) {
+          case -1 :
+            driveOnOff = 0; //최종 정지선 인식 후
+            driveOnOff = 1;
+            break;
           case 1 :  // 출발 및 도로주행
             break;
           case 2 :  // 고가도로 구간
@@ -496,6 +457,7 @@ void * capture_thread(void *arg)
             if(traffic_light_flag < 1){
               trafficLightMission(vpe->disp, capt);
             }
+
             break;
         }
         if(driveOnOff)
@@ -953,264 +915,9 @@ int verticalParking(){
 
 
 
-
-
-
 }
 
 void horizonParking(){
-
-  printf("vertical parking start!!!!! \n");
-
-
-
- int distance_sensor[6];
-
-
-
- int data = DistanceSensor(3);
-
- int volt = data_transform(data, 0 , 4095 , 0 , 5000);
-
- int debug = (27.61 / (volt - 0.1696))*1000;
-
- angle = data_transform(debug , 15 , 35 , 450 , 500);
-
- angle = 1520 - angle;
-
-
-
- SteeringServoControl_Write(angle);
-
-
-
- usleep(500000);
-
- DesireSpeed_Write(-100);
-
-
-
- /*후진 주차 시작*/
-
- while(1){
-
-
-
-   SteeringServoControl_Write(angle);
-
-   DesireSpeed_Write(-100);
-
-
-
-    for( i = 3 ; i <= 5 ; i++){
-
-      data = DistanceSensor(i);
-
-      volt = data_transform(data, 0 , 4095 , 0 , 5000);
-
-      debug = (27.61 / (volt - 0.1696))*1000;
-
-      distance_sensor[i] = debug;
-
-    }
-
-
-
-      if(distance_sensor[4] <= 10){
-
-        DesireSpeed_Write(0);
-
-        printf("Parking Finished \n");
-
-        break;
-
-      }
-
-
-
-
-
-    if(  (distance_sensor[3] > 100 && distance_sensor[5] > 100) ){
-
-      //  DesireSpeed_Write(0);
-
-      angle = 1520;
-
-      printf("%d\n" , distance_sensor[5]-distance_sensor[3]);
-
-      printf("일자조향\n" );
-
-      continue;
-
-    }
-
-    else if((distance_sensor[3] < 100 && distance_sensor[5] < 100)){
-
-      //DesireSpeed_Write(0);
-
-      if( distance_sensor[3]  < distance_sensor[5] ){ //오른쪽에 붙었을 때
-
-
-
-        angle = data_transform(distance_sensor[3] - distance_sensor[5] , -15 , 0 , -200, 0);
-
-        angle = 1520 - angle;
-
-        printf("왼쪽조향\n" );
-
-        continue;
-
-      }
-
-      else if( distance_sensor[3] > distance_sensor[5] ){ //왼쪽에 붙었을 때
-
-
-
-        angle = data_transform(distance_sensor[5] - distance_sensor[3] , -15 , 0 , -200, 0);
-
-        angle = 1520 + angle;
-
-        printf("오른쪽조향\n" );
-
-        continue;
-
-      }
-
-      else if( distance_sensor[3]  == distance_sensor[5] ){ //왼쪽에 붙었을 때
-
-        angle = 1520 ;
-
-        printf("일자조향\n" );
-
-        continue;
-
-      }
-
-    }
-
-
-
-  }
-
-
-
-  Alarm_Write(ON);
-
-  usleep(1000000);
-
-  Alarm_Write(OFF);
-
-
-
-  /*  차선 복귀 */
-
-
-
- angle = 1520;
-
- DesireSpeed_Write(80);
-
- int flag = 0;
-
- while(1){
-
-
-
-   SteeringServoControl_Write(angle);
-
-
-
-   for( i = 3 ; i <= 5 ; i++){
-
-     data = DistanceSensor(i);
-
-     volt = data_transform(data, 0 , 4095 , 0 , 5000);
-
-     debug = (27.61 / (volt - 0.1696))*1000;
-
-     distance_sensor[i] = debug;
-
-   }
-
-
-
-
-
-   if(distance_sensor[4] < 20 && (distance_sensor[3] < 20 && distance_sensor[5] < 20) ){ //4번 센서랑 벽까지 거리가 20미만 이면 가운데 맞추면서 나옴
-
-
-
-
-
-     if( distance_sensor[3] < distance_sensor[5]){ //오른쪽에 붙었을 때
-
-
-
-       angle = data_transform(distance_sensor[3] - distance_sensor[5] , -15 , 0 , -200, 0);
-
-       angle = 1520 - angle;
-
-       printf("전진 왼쪽조향\n" );
-
-       continue;
-
-     }
-
-     else if( distance_sensor[3] > distance_sensor[5] ){ //왼쪽에 붙었을 때
-
-
-
-       angle = data_transform(distance_sensor[5] - distance_sensor[3] , -15 , 0 , -200, 0);
-
-       angle = 1520 + angle;
-
-       printf("전진 오른쪽조향\n" );
-
-       continue;
-
-     }
-
-     else if( distance_sensor[3] == distance_sensor[5] ){ //r
-
-       angle = 1520 ;
-
-       printf("전진 일자조향\n" );
-
-       continue;
-
-     }
-
-
-
-
-
-   }
-
-   else if(distance_sensor[5] > 30 && distance_sensor[4] > 100){
-
-     printf("park finished!!\n");
-
-     DesireSpeed_Write(0);
-
-     break;
-
-   }
-
-   else if(  distance_sensor[4] > 20  && flag == 0){ //30보다 커지면 오른쪽 최대조향
-
-     int interval = data_transform(distance_sensor[3] - distance_sensor[5] , 0 , 15 , 400 , 500);
-
-     angle = 1520 - interval;
-
-     flag = 1;
-
-     SteeringServoControl_Write(angle);
-
-   }
-
- }
-
-
 
 
 }
@@ -1473,20 +1180,133 @@ void mode_tunnel()
   //}
 }
 
+/************************* 8.신호등 **************************/
+
+void leftRotate(){
+
+
+  int data = DistanceSensor(1);
+  int volt = data_transform(data, 0 , 4095 , 0 , 5000);
+  int distance = (27.61 / (volt - 0.1696)) * 1000;
+
+  printf("%d\n", distance);
+
+  if(distance < 50){
+
+    SteeringServoControl_Write(2000);
+    while(1){
+      int data1 = DistanceSensor(3);
+      int volt1 = data_transform(data1, 0 , 4095 , 0 , 5000);
+      int distance1 = (27.61 / (volt1 - 0.1696)) * 1000;
+
+      if(distance1 < 50){
+
+        break;
+
+      }
+
+    }
+
+    traffic_light_flag = 4;
+    SteeringServoControl_Write(1800);
+
+
+  }
+
+
+}
+
+void rightRotate(){
+
+
+  int data = DistanceSensor(1);
+  int volt = data_transform(data, 0 , 4095 , 0 , 5000);
+  int distance = (27.61 / (volt - 0.1696)) * 1000;
+
+  printf("%d\n", distance);
+
+  if(distance < 50){
+
+    SteeringServoControl_Write(1000);
+
+    while(1){
+      int data1 = DistanceSensor(5);
+      int volt1 = data_transform(data1, 0 , 4095 , 0 , 5000);
+      int distance1 = (27.61 / (volt1 - 0.1696)) * 1000;
+
+      if(distance1 < 50) {
+        break;
+      }
+
+    }
+
+    traffic_light_flag = 4;
+
+    SteeringServoControl_Write(1200);
+
+
+
+  }
+
+}
+
+
 void mode_traffic_light(){
+
+  printf("flag %d\n", traffic_light_flag);
+
 
   if(traffic_light_flag == 0){
     speed = 0; // speed set     --> speed must be set when using position controller
     DesireSpeed_Write(speed);
 
+    printf("red : %d, %d", centerP[0], centerP[1]);
+    printf("yellow : %d, %d", centerP[2], centerP[3]);
+    printf("green : %d, %d", centerP[4], centerP[5]);
+  }
+  else if(traffic_light_flag == 1){
+    speed = 30;
+    DesireSpeed_Write(speed);
+    leftRotate();
+  }
+  else if(traffic_light_flag == 2){
+    speed = 30;
+    DesireSpeed_Write(speed);
+    rightRotate();
+  }
+  else if(traffic_light_flag == 4){
+
+      int flag = 0;
+      sensor = LineSensor_Read();   // black:1, white:0
+      printf("LineSensor_Read() = ");
+
+      for(i = 0; i < 8; i++){
+        if((i % 4) ==0) printf(" ");
+        if((sensor & byte)) printf("1");
+        else{
+          printf("0");
+          if(i != 0) flag++;
+        }
+        sensor = sensor << 1;
+      }
+
+      printf("\n");
+      // printf("flag : %d\n", flag);
+
+      if(flag >= 3){
+        printf("LineSensor_Read() = STOP! \n");
+        traffic_light_flag = 5;
+
+        SteeringServoControl_Write(1520);
+
+        finish_flag = 1; //정지선 인식
+        mode = -1;
+      }
+
+
   }
 
-  printf("red : %d, %d", centerP[0], centerP[1]);
-  printf("yellow : %d, %d", centerP[2], centerP[3]);
-  printf("green : %d, %d", centerP[4], centerP[5]);
 
-
-  printf("flag %d\n", traffic_light_flag);
 
 
 
@@ -1502,6 +1322,15 @@ int main(int argc, char **argv)
   int disp_argc = 3;
   char* disp_argv[] = {"dummy", "-s", "4:480x272", "\0"}; // ���� ���� ���� Ȯ�� �� ó��..
   int ret = 0;
+
+  CarControlInit();
+
+  cameraY = 1630;
+  SteeringServoControl_Write(angle);
+  CameraXServoControl_Write(angle);
+  CameraYServoControl_Write(cameraY);
+
+  usleep(3000000);
 
 
   tdata.dump_state = DUMP_NONE;
@@ -1590,12 +1419,9 @@ int main(int argc, char **argv)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-  CarControlInit();
 
-  cameraY = 1630;
-  SteeringServoControl_Write(angle);
-  CameraXServoControl_Write(angle);
-  CameraYServoControl_Write(cameraY);
+
+
 
   SpeedControlOnOff_Write(CONTROL);   // speed controller must be also ON !!!
   speed = 0; // speed set     --> speed must be set when using position controller
@@ -1641,7 +1467,6 @@ int main(int argc, char **argv)
   cameraOnOff = 1;
   // driveOnOff = 1;
 
-  usleep(3000000);
 
   while(1){
 
@@ -1676,6 +1501,15 @@ int main(int argc, char **argv)
       driving_write_steer();
     }
 
+    if(finish_flag == 1){
+      printf("...finish...\n");
+      SteeringServoControl_Write(1520);
+
+      usleep(2500000);
+      speed = 0;
+      DesireSpeed_Write(speed);
+      break;
+    }
 
   }
 /* register signal handler for <CTRL>+C in order to clean up */

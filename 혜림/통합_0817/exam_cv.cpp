@@ -12,8 +12,6 @@
 #include <opencv2/objdetect/objdetect.hpp>
 
 #define PI 3.1415926
-#define IMGYE 100
-#define IMGYE2 10
 
 using namespace std;
 using namespace cv;
@@ -37,9 +35,6 @@ const Vec3b HSV_RED_UPPER = Vec3b(10, 255, 255);
 const Vec3b HSV_RED_LOWER1 = Vec3b(160, 100, 100);
 const Vec3b HSV_RED_UPPER1 = Vec3b(179, 255, 255);
 
-const Vec3b HSV_GREEN_LOWER = Vec3b(60, 100, 50);
-const Vec3b HSV_GREEN_UPPER = Vec3b(110, 255, 255);
-
 const Vec3b HSV_BLACK_LOWER = Vec3b(0, 0, 0);
 const Vec3b HSV_BLACK_UPPER = Vec3b(180, 255, 50);
 
@@ -57,11 +52,6 @@ bool hough_right(Mat& img, Mat& srcRGB, Point* p1, Point* p2);
 bool hough_curve(Mat& img, Mat& srcRGB, Point* p1, Point* p2);
 int curve_detector(Mat& leftImg, Mat& rightImg, int number);
 float data_transform(float x, float in_min, float in_max, float out_min, float out_max);
-void get_center_point(Mat& binaryImg, Point* p);
-
-Point2f v[2];
-bool check[2] = { false, };
-int cnt = 0;
 
 
 extern "C" {
@@ -233,97 +223,7 @@ int enter_the_rotary(unsigned char* srcBuf, int iw, int ih, unsigned char* outBu
 
 }
 
-int traffic_light(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh, int centerP[]){
 
-
-  Mat srcRGB(ih, iw, CV_8UC3, srcBuf); //input
-  Mat dstRGB(nh, nw, CV_8UC3, outBuf); //ouput
-  Mat resRGB(ih, iw, CV_8UC3);         //result
-
-  Mat roiImg, hsv, redBinaryImg, redBinaryImg1, yellowBinaryImg, greenBinaryImg;
-  Mat result;
-
-  roiImg = srcRGB(Rect(0, 0, srcRGB.cols, srcRGB.rows/3));
-
-  cvtColor(roiImg, hsv, COLOR_BGR2HSV);
-
-  inRange(hsv, HSV_RED_LOWER, HSV_RED_UPPER, redBinaryImg);
-  inRange(hsv, HSV_RED_LOWER1, HSV_RED_UPPER1, redBinaryImg1);
-
-  redBinaryImg = redBinaryImg | redBinaryImg1;
-
-  inRange(hsv, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, yellowBinaryImg);
-
-  inRange(hsv, HSV_GREEN_LOWER, HSV_GREEN_UPPER, greenBinaryImg);
-
-  result = redBinaryImg | yellowBinaryImg | greenBinaryImg;
-
-  cvtColor(result, result, CV_GRAY2BGR);
-  resize(result, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
-  //
-  Point2f diff;
-  Point2f leftgreen;
-  Point2f green;
-
-  Point redCenter, yellowCenter, greenCenter;
-
-  get_center_point(redBinaryImg, & redCenter);
-  get_center_point(yellowBinaryImg, & yellowCenter);
-  get_center_point(greenBinaryImg, & greenCenter);
-
-  centerP[0] = redCenter.x;
-  centerP[1] = redCenter.y;
-  centerP[2] = yellowCenter.x;
-  centerP[3] = yellowCenter.y;
-  centerP[4] = greenCenter.x;
-  centerP[5] = greenCenter.y;
-
-
-  if(check[0] && check[1]){
-    diff = {v[1].x - v[0].x, v[1].y - v[0].y};
-    leftgreen = {v[1].x + diff.x, v[1].y + diff.y};
-    green = {v[1].x + 2 * diff.x, v[1].y+ 2 * diff.y};
-  }
-  if(!check[0]){
-    if(redCenter.x == -1 || redCenter.y == -1)
-      return -3;
-    int distSquare = (v[0].x - redCenter.x) * (v[0].x - redCenter.x) +
-      (v[0].y - redCenter.y) * (v[0].y - redCenter.y);
-
-    if(distSquare < IMGYE){
-      cnt++;
-    }else{
-      cnt = 0;
-      v[0].x = redCenter.x;
-      v[0].y = redCenter.y;
-    }
-    if(cnt > IMGYE2) check[0] = true;
-    }
-  else if(!check[1]){
-      if(yellowCenter.x == -1 || yellowCenter.y == -1) return -4;
-
-      int dist = (v[0].x - redCenter.x) * (v[0].x - redCenter.x) +
-        (v[0].y - redCenter.y) * (v[0].y - redCenter.y);
-      int distSquare = (v[1].x - yellowCenter.x) * (v[1].x - yellowCenter.x) +
-        (v[1].y - yellowCenter.y) * (v[1].y - yellowCenter.y);
-      if(distSquare < IMGYE){
-        cnt++;
-      }else{
-        cnt = 0;
-        v[1].x = yellowCenter.x;
-        v[1].y = yellowCenter.y;
-      }
-      if(cnt > IMGYE2)  check[1] = true;
-    }
-    else{
-
-          if(greenBinaryImg.at<uchar>(green.x,green.y) == 255) return 2;
-
-        // if(leftgreen.x < greenBinaryImg.rows && leftgreen.y < greenBinaryImg.cols &&
-          if(greenBinaryImg.at<uchar>(leftgreen.x,leftgreen.y) == 255) return 1;
-    }
-    return -2;
-  }
 }
 
 ////////////////////밑에 함수들은 exam_cv.cpp에서만 사용하는 함수들/////////////////////
@@ -731,25 +631,3 @@ int curve_detector(Mat& leftImg, Mat& rightImg, int number){
 float data_transform(float x, float in_min, float in_max, float out_min, float out_max){
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
-
-void get_center_point(Mat& binaryImg, Point * p){
-
-    int cnt_x = 0;
-    int cnt_y = 0;
-    int count = 0;
-
-    for(int i = 0; i < binaryImg.cols; i++){
-        for(int j = 0; j < binaryImg.rows; j++){
-            if (binaryImg.at<uchar>(j, i) == 255){
-                cnt_x += i;
-                cnt_y += j;
-                count++;
-            }
-        }
-    }
-
-    if(count != 0){
-        p->x = cnt_x / count;
-        p->y = cnt_y / count;
-    }
- }
