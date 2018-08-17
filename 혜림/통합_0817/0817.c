@@ -126,7 +126,7 @@ void mode_outbreak();
 
 ////////////////////////////주차 변수/////////////////////////////
 
-int data, volt, debug, data_left, volt_left, debug_left, data_right, volt_right, debug_right;
+int data, volt, debug, data_left, volt_left, debug_left, data_right, volt_right, debug_right, interval;
 bool parking_finish = 0;
 
 bool is_parking_area();
@@ -819,17 +819,29 @@ bool parking_start()        // 주차 모드 판단 (수평 or 수직) -> 왼쪽
 void horizontal_parking()       // 수평 주차 모드
 {
   printf("수평 주차 모드 run!!\n");
+  for(i = 3 ; i <= 5 ; i++){
+    data = DistanceSensor(i);
+    volt = data_transform(data, 0 , 4095 , 0 , 5000);
+    debug = (27.61 / (volt - 0.1696))*1000;
+    distance_sensor[i] = debug;
+  }
+  interval = data_transform( distance_sensor[3] , 0 , 20 , 0 , 400);
+  angle = 1520 - interval;
+
   /* 들어갈 공간 확보를 위해 살짝 앞으로 뺌*/
 
   while(1){
+    for(i = 3; i <= 5; i++) {
+      data = DistanceSensor(i);
+      volt = data_transform(data, 0, 4095, 0, 5000);
+      debug = (27.61 / (volt_horizontal - 0.1696))*1000;
+      distance_sensor[i] = debug;
+    }
     DesireSpeed_Write(50);
-    SteeringServoControl_Write(1520);
-    data = DistanceSensor(4);
-    volt = data_transform(data, 0 , 4095 , 0 , 5000);
-    debug = (27.61 / (volt - 0.1696))*1000;
-    printf("%d CM\n" , debug);
+    SteeringServoControl_Write(angle);
+    printf("주차 %d CM\n" , distance_sensor[4]);
 
-    if(debug > 35) {
+    if(distance_sensor[4] > 47) {
       DesireSpeed_Write(0);
       break;
     }
@@ -843,11 +855,13 @@ void horizontal_parking()       // 수평 주차 모드
       volt = data_transform(data, 0 , 4095 , 0 , 5000);
       debug = (27.61 / (volt - 0.1696))*1000;
       distance_sensor[i] = debug;
+      printf("뒤 !! \n");
     }
 
     SteeringServoControl_Write(2000);
     DesireSpeed_Write(-100);
-    if(distance_sensor[4] < 10) {                 // 후방 거리가 10cm 이내이면 주차 완료
+    printf("뒤 %d CM\n" , distance_sensor[4]);
+    if(distance_sensor[4] < 10 || distance_sensor[3] < 7) {                 // 후방 거리가 10cm 이내이면 주차 완료
       DesireSpeed_Write(0);
       break;
     }
@@ -938,10 +952,39 @@ void return_lane_vertical()      // 수직 주차 완료 후 차선 복귀
   }
 }
 
-void return_lane_horizontal()
+void return_lane_horizontal()   // 수평 주차 완료 후 차선 복귀
 {
+  SteeringServoControl_Write(2000);
+  DesireSpeed_Write(100);
 
+  while(1){
+    for( i = 2 ; i <= 6 ; i++){
+      data = DistanceSensor(i);
+      volt = data_transform(data, 0 , 4095 , 0 , 5000);
+      debug = (27.61 / (volt - 0.1696))*1000;
+      distance_sensor[i] = debug;
+    }
+    if(distance_sensor[2] > 150){     // 오른쪽 거리가 150 cm 이상이면 멈춤
+      DesireSpeed_Write(0);
+      break;
+    }
+  }
 
+  SteeringServoControl_Write(1000);
+  DesireSpeed_Write(100);
+
+  while(1){
+    for( i = 3 ; i <= 5 ; i++){
+      data = DistanceSensor(i);
+      volt = data_transform(data, 0 , 4095 , 0 , 5000);
+      debug = (27.61 / (volt - 0.1696))*1000;
+      distance_sensor[i] = debug;
+    }
+    if(distance_sensor[4] > 150){       // 후방 거리가 150 이상이면 멈춤
+      DesireSpeed_Write(0);
+      break;
+    }
+  }
 }
 
 void mode_parking(){
