@@ -135,7 +135,8 @@ enum PASSING_LANE_SITUATION {before_entrance = -1,
 							go_to_middle_lane,
 							go_to_right_lane,
 							back_from_left_lane,
-							back_from_right_lane};
+							back_from_right_lane
+							check_passing_lane_end};
 
 volatile PASSING_LANE_SITUATION passing_lane_situation = before_entrance; // 7
 // -1 : 추월차선 진입 전
@@ -145,6 +146,7 @@ volatile PASSING_LANE_SITUATION passing_lane_situation = before_entrance; // 7
 //  3 : 오른쪽 차선으로 진행
 //  4 : back_from_left_lane
 //  5 : back_from_right_lane
+//  6 : passing_lane_end
 
 volatile int traffic_light_flag = 0; // 8
 
@@ -208,10 +210,11 @@ void mode_tunnel();
 //////////////////////////추월 차선/////////////////////////////////
 
 int is_passing_lane();
-void go_left_lane();
-void go_right_lane();
+void go_left();
+void go_right();
 void return_from_left_lane();
 void return_from_right_lane();
+void check_end();
 
 ///////////////////////////////////////////////////////////////////
 
@@ -510,6 +513,7 @@ void * capture_thread(void *arg)
               usleep(500000);
               passing_lane_decision(vpe->disp, capt);
             }
+
             break;
           case 8 : // 신호등
             break;
@@ -1503,7 +1507,7 @@ int is_passing_lane()
   else return -1;
 }
 
-void go_left_lane()
+void go_left()
 {
   int front_distance;
   int data, volt;
@@ -1516,65 +1520,109 @@ void go_left_lane()
   else passing_lane_situation = back_from_left_lane;
 }
 
-void go_right_lane()
+void go_right()
 {
-  int front_distance;
-  int data, volt;
+	int front_distance;
+	int data, volt;
 
-  data = DistanceSensor(1);
-  volt = data_transform(data, 0 , 4095 , 0 , 5000);
-  front_distance = (27.61 / (volt - 0.1696))*1000;
-
-  if(front_distance < 30) angle = 2000;
-  else passing_lane_situation = back_from_right_lane;
+	data = DistanceSensor(1);
+	volt = data_transform(data, 0 , 4095 , 0 , 5000);
+	front_distance = (27.61 / (volt - 0.1696))*1000;
+	
+	if(front_distance < 30) angle = 2000;
+	else passing_lane_situation = back_from_right_lane;
 }
 
 void return_from_left_lane()
 {
+	int right_distance[2];
+	int data[2], volt[2];
+
+	data[0] = DistanceSensor(2);
+	data[1] = DistanceSensor(3);
+	volt[0] = data_transform(data[0], 0 , 4095 , 0 , 5000);
+	volt[1] = data_transform(data[1], 0 , 4095 , 0 , 5000);
 	
+	right_distance[0] = (27.61 / (volt[0] - 0.1696))*1000;
+	right_distance[1] = (27.61 / (volt[1] - 0.1696))*1000;
+
+	if(right_distance[0] < 30)
+	{
+
+	}
+	else
+	{
+
+	}
 }
 
 void return_from_right_lane()
 {
+	int left_distance[2];
+	int data[2], volt[2];
+
+	data[0] = DistanceSensor(2);
+	data[1] = DistanceSensor(3);
+	volt[0] = data_transform(data[0], 0 , 4095 , 0 , 5000);
+	volt[1] = data_transform(data[1], 0 , 4095 , 0 , 5000);
 	
+	left_distance[0] = (27.61 / (volt[0] - 0.1696))*1000;
+	left_distance[1] = (27.61 / (volt[1] - 0.1696))*1000;
+
+	if(left_distance[0] < 30) 
+	{
+		
+	}
+	else
+	{
+
+	}
+}
+
+void check_end()
+{
+
 }
 
 void mode_passing_lane()
 {
-  printf("Passing Lane Mode\n");
-  if(passing_lane_situation == -1)
-  {
-    passing_lane_situation = is_passing_lane();
-  }
-  else if(passing_lane_situation == lane_decision)
-  {
-    driveOnOff = 0;
-    CameraYServoControl_Write(1500);
-    printf("판별중...\n");
-  }
-  else
-  {
-    printf("%d으로 가자!\n", passing_lane_situation);
-    CameraYServoControl_Write(1650);
-    switch(passing_lane_situation)
-    {
-      case go_to_left_lane :
-        go_left_lane();
-        break;
-      case go_to_middle_lane :
-        break;
-      case go_to_right_lane :
-        go_right_lane();
-        break;
-      case back_from_left_lane :
-      	return_from_left_lane();
-      	break;
-      case back_from_right_lane :
-      	return_from_right_lane();
-      	break;
-    }
-    SteeringServoControl_Write(angle);
-  }
+	printf("Passing Lane Mode\n");
+	if(passing_lane_situation == -1)
+	{
+	  passing_lane_situation = is_passing_lane();
+	}
+	else if(passing_lane_situation == lane_decision)
+	{
+		driveOnOff = 0;
+		CameraYServoControl_Write(1500);
+		printf("판별중...\n");
+	}
+	else
+	{
+		printf("%d으로 가자!\n", passing_lane_situation);
+		CameraYServoControl_Write(1650);
+		switch(passing_lane_situation)
+		{
+		case go_to_left_lane :
+			go_left();
+			break;
+		case go_to_middle_lane :
+			break;
+		case go_to_right_lane :
+			go_right();
+			break;
+		case back_from_left_lane :
+	  		return_from_left_lane();
+	  		break;
+		case back_from_right_lane :
+	  		return_from_right_lane();
+	  		break;
+		case check_passing_lane_end :
+			check_end();
+	  		break;
+		}	
+		SteeringServoControl_Write(angle);
+	}
 
 }
 
