@@ -129,12 +129,22 @@ volatile int tunnel_flag = 0; // 6
 // 1 : 터널 주행 중
 // 2 : 터널 탈출 후
 
-volatile int passing_lane_number = -1; // 7
+enum PASSING_LANE_SITUATION {before_entrance = -1, 
+							lane_decision,
+							go_to_left_lane,
+							go_to_middle_lane,
+							go_to_right_lane,
+							back_from_left_lane,
+							back_from_right_lane};
+
+volatile PASSING_LANE_SITUATION passing_lane_situation = before_entrance; // 7
 // -1 : 추월차선 진입 전
 //  0 : 차선 판단중
-//  1 : 왼쪽 차선으로 진행 가능
-//  2 : 가운데 차선으로 진행 가능
-//  3 : 오른쪽 차선으로 진행 가능
+//  1 : 왼쪽 차선으로 진행
+//  2 : 가운데 차선으로 진행
+//  3 : 오른쪽 차선으로 진행
+//  4 : back_from_left_lane
+//  5 : back_from_right_lane
 
 volatile int traffic_light_flag = 0; // 8
 
@@ -198,6 +208,10 @@ void mode_tunnel();
 //////////////////////////추월 차선/////////////////////////////////
 
 int is_passing_lane();
+void go_left_lane();
+void go_right_lane();
+void return_from_left_lane();
+void return_from_right_lane();
 
 ///////////////////////////////////////////////////////////////////
 
@@ -346,7 +360,7 @@ static void drive(struct display *disp, struct buffer *cambuf)
         //drive mode
         //1 : normal drive
         //2 : rotary drive
-        if(rotary_flag == 2 || (passing_lane_number == -1 && mode == 7)){
+        if(rotary_flag == 2 || (passing_lane_situation == before_entrance && mode == 7)){
           temp_angle = line_detector(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, slope, 2);
           stop_line_count = stop_line_detector(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H);
 
@@ -393,7 +407,7 @@ static void passing_lane_decision(struct display *disp, struct buffer *cambuf)
 
         gettimeofday(&st, NULL);
 
-        passing_lane_number = passing_lane_check(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H) + 1;
+        passing_lane_situation = (PASSING_LANE_SITUATION)(passing_lane_check(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H) + 1);
 
         gettimeofday(&et, NULL);
         optime = ((et.tv_sec - st.tv_sec)*1000)+ ((int)et.tv_usec/1000 - (int)st.tv_usec/1000);
@@ -491,8 +505,9 @@ void * capture_thread(void *arg)
             if(tunnel_flag == 1) driveOnOff = 0;
             break;
           case 7 :  // 추월 차선
-            if(passing_lane_number == 0) {
+            if(passing_lane_situation == lane_decision) {
               driveOnOff = 0;
+              usleep(500000);
               passing_lane_decision(vpe->disp, capt);
             }
             break;
@@ -1488,14 +1503,50 @@ int is_passing_lane()
   else return -1;
 }
 
+void go_left_lane()
+{
+  int front_distance;
+  int data, volt;
+
+  data = DistanceSensor(1);
+  volt = data_transform(data, 0 , 4095 , 0 , 5000);
+  front_distance = (27.61 / (volt - 0.1696))*1000;
+
+  if(front_distance < 30) angle = 1000;
+  else passing_lane_situation = back_from_left_lane;
+}
+
+void go_right_lane()
+{
+  int front_distance;
+  int data, volt;
+
+  data = DistanceSensor(1);
+  volt = data_transform(data, 0 , 4095 , 0 , 5000);
+  front_distance = (27.61 / (volt - 0.1696))*1000;
+
+  if(front_distance < 30) angle = 2000;
+  else passing_lane_situation = back_from_right_lane;
+}
+
+void return_from_left_lane()
+{
+	
+}
+
+void return_from_right_lane()
+{
+	
+}
+
 void mode_passing_lane()
 {
   printf("Passing Lane Mode\n");
-  if(passing_lane_number == -1)
+  if(passing_lane_situation == -1)
   {
-    passing_lane_number = is_passing_lane();
+    passing_lane_situation = is_passing_lane();
   }
-  else if(passing_lane_number == 0)
+  else if(passing_lane_situation == lane_decision)
   {
     driveOnOff = 0;
     CameraYServoControl_Write(1500);
@@ -1503,20 +1554,28 @@ void mode_passing_lane()
   }
   else
   {
-    printf("%d으로 가자!\n", passing_lane_number);
+    printf("%d으로 가자!\n", passing_lane_situation);
     CameraYServoControl_Write(1650);
-    switch(passing_lane_number)
+    switch(passing_lane_situation)
     {
-      case 1 :
-        
+      case go_to_left_lane :
+        go_left_lane();
         break;
-      case 2 :
+      case go_to_middle_lane :
         break;
-      case 3 :
-
+      case go_to_right_lane :
+        go_right_lane();
         break;
+      case back_from_left_lane :
+      	return_from_left_lane();
+      	break;
+      case back_from_right_lane :
+      	return_from_right_lane();
+      	break;
     }
+    SteeringServoControl_Write(angle);
   }
+
 }
 
 
