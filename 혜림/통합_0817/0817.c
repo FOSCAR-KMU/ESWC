@@ -127,6 +127,7 @@ void mode_outbreak();
 ////////////////////////////주차 변수/////////////////////////////
 
 int data, volt, debug, data_left, volt_left, debug_left, data_right, volt_right, debug_right, interval;
+int distance_sensor[7];
 bool parking_finish = 0;
 
 bool is_parking_area();
@@ -834,7 +835,7 @@ void horizontal_parking()       // 수평 주차 모드
     for(i = 3; i <= 5; i++) {
       data = DistanceSensor(i);
       volt = data_transform(data, 0, 4095, 0, 5000);
-      debug = (27.61 / (volt_horizontal - 0.1696))*1000;
+      debug = (27.61 / (volt - 0.1696))*1000;
       distance_sensor[i] = debug;
     }
     DesireSpeed_Write(50);
