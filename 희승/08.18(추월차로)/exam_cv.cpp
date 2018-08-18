@@ -224,52 +224,41 @@ int enter_the_rotary(unsigned char* srcBuf, int iw, int ih, unsigned char* outBu
 }
 
 int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh){
+
   Mat srcRGB(ih, iw, CV_8UC3, srcBuf); //input
   Mat dstRGB(nh, nw, CV_8UC3, outBuf); //output
-
   Mat resRGB(ih, iw, CV_8UC3); //result
 
   Mat roiImg;
   Mat yuvImg;
   Mat binaryImg;
-  Mat topViewImg;
 
   int cnt = 0;
   bool flag;
 
   roiImg = srcRGB(Rect(0, srcRGB.rows/3, srcRGB.cols, srcRGB.rows / 3 * 2));
 
-  // pair<bool, vector<Point> > temp = find_point_4_top_view(roiImg);
-
-  // if(!temp.first) return -1;
-
-  // topViewImg = top_view_transform(roiImg, temp.second);
-
   cvtColor(roiImg, yuvImg, CV_BGR2YUV);
 
   inRange(yuvImg, YUV_LOWER, YUV_UPPER, binaryImg);
 
-  int count[3] = {0, };
+  int count[2] = { 0, };
 
   for(int i = 0 ; i < binaryImg.rows ; i++)
   {
     int j;
-    for(j = 0 ; j < binaryImg.cols / 3 ; j++)
+    for(j = 0 ; j < binaryImg.cols / 2 ; j++)
       if(binaryImg.at<uchar>(i, j) == 255) count[0]++;
-    for(; j < binaryImg.cols * 2 / 3 ; j++)
-      if(binaryImg.at<uchar>(i, j) == 255) count[1]++;
-    for(; j < binaryImg.cols ; j++)
-      if(binaryImg.at<uchar>(i, j) == 255) count[2]++;
+    for(; j < binaryImg.cols; j++)
+      if(binaryImg.at<uchar>(i, j) == 255) count[1]++;;
   }
 
-    cvtColor(binaryImg, binaryImg, CV_GRAY2BGR);
 
 
+  cvtColor(binaryImg, binaryImg, CV_GRAY2BGR);
   resize(binaryImg, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
 
-  if(count[0] + count[1] + count[2] < 1000) return -1;
-
-  return (count[0] > count[2] ? 0 : 1);
+  return (count[0] > count[1] ? 2 : 3);
 }
 
 
@@ -621,7 +610,7 @@ int curve_detector(Mat& leftImg, Mat& rightImg, int number){
 
   bool error = true;
 
-  float xLeft, xRight, slope, steer, skewness, y = 30.0;
+  float xLeft, xRight, slope, steer, skewness, y = 60.0;
   int angle;
 
   Mat oriImg, roiImg, hsvImg, binaryImg, binaryImg1, cannyImg;
@@ -629,7 +618,7 @@ int curve_detector(Mat& leftImg, Mat& rightImg, int number){
 
   hconcat(leftImg, rightImg, oriImg);
   roiImg = oriImg(Rect(0, oriImg.rows/2, oriImg.cols, oriImg.rows/2));
-  cvtColor(roiImg, hsvImg, CV_BGR2HSV);
+  cvtColor(oriImg, hsvImg, CV_BGR2HSV);
 
   switch(number){
     case 1 :
