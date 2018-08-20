@@ -42,7 +42,8 @@
 #define DUMP_MSGQ_MSG_TYPE      0x02
 
 #define OVERPASS_MAX            25  // 고가도로 탈출 거리
-#define MIN_DIST                15  // 회전교차로 차 간격
+#define MIN_DIST                15  // 회전교차로 차 간격 최소
+#define MAX_DIST                40  // 회전교차로 차 간격 최대
 ////////////////////////////////////////////////////////////////////////////////////
 
 volatile bool cameraOnOff = 0;
@@ -1049,34 +1050,26 @@ bool rotary_finish()
 
 }
 
-void checkAnotherCar()
+bool isAnotherCar()
 {
-  for(i = 0; i < 10; ++i)
-  {
-    int dist_front = DistanceSensor(1);
-    int dist_back = DistanceSensor(4);
-    int volt_front = data_transform(dist_front, 0 , 4095 , 0 , 5000);
-    int volt_back = data_transform(dist_back, 0, 4095, 0, 5000);
+  int dist_back = DistanceSensor(4);
+  int volt_back = data_transform(dist_back, 0, 4095, 0, 5000);
 
-    //printf("channel = %d, distance = 0x%04X(%d) \n", channel, data, data);
-    dist_front = (27.61 / (volt_front - 0.1696))*1000;
-    dist_back = (27.61 / (volt_back - 0.1696)) *1000;
-    printf("front : %d cm , back : %d cm \n", dist_front, dist_back);
+  dist_back = (27.61 / (volt_back - 0.1696)) *1000;
+  // printf("front : %d cm , back : %d cm \n", dist_front, dist_back);
 
-    // drive condition
-    SpeedControlOnOff_Write(CONTROL);   // speed controller must be also ON !!!
-    if(dist_front <= MIN_DIST)        //  앞에 차가 존재할 경우 멈춤
-      speed = 0;
+  // drive condition
+  SpeedControlOnOff_Write(CONTROL);   // speed controller must be also ON !!!
 
-    else if(dist_back <= MIN_DIST)
-      speed = 100;                    // 뒤에 차가 존재할 경우 속도 최대 (곡선기준)
-
-    else if(dist_back >= MIN_DIST && dist_front >= MIN_DIST)
-      // speed = 50;                     // 앞 뒤에 둘다 차가 존재하지 않을 경우
-      speed = 20;
+  if(dist_back <= MIN_DIST) {
+    speed = 100;                    // 뒤에 차가 존재할 경우 속도 최대 (곡선기준)
     DesireSpeed_Write(speed);
+    return true;
   }
 
+  else if(dist_back >= MAX_DIST) {
+    return false;
+  }
 }
 
 void mode_rotary()
@@ -1124,7 +1117,7 @@ void mode_rotary()
       else if(rotary_enter_count < min_rotary_threshold && rotary_ready_flag == 1){ //차가 지나간 후에 주행 시작
         printf("rotaty_start!!!");
         rotary_flag = 2; // 회전교차로 진입 후
-        speed = 50;
+        speed = 10;
         DesireSpeed_Write(speed);
       }
       else if(rotary_ready_flag == 0){
@@ -1132,18 +1125,19 @@ void mode_rotary()
       }
 
     }
-    else if(rotary_flag == 2){
-      if(rotary_finish()) {
+    else if(rotary_flag == 2){      // 회전교차로 진행중
+      // if(rotary_finish()) {
+      //   rotary_flag = 3;
+      // }
+      if(isAnotherCar()) // 교차로 주행 중 뒤 차 유무 확인 후 속도 upupupup
         rotary_flag = 3;
+    }
+    else if(rotary_flag == 3) {
+      if(!isAnotherCar()) {   // 뒤에 차 오는지 확인하고 사라지면 교차로 끝내고 터널 모드
+        mode++;
+        rotary_flag = -1; // 교차로 완료 표시
       }
-      checkAnotherCar(); // 교차로 주행 중 다른 차 유무 확인
     }
-    else if(rotary_flag == 3) { // 교차로 탈출
-      mode++;
-      rotary_flag = -1; // 교차로 완료 표시
-    }
-
-
 }
 
 /********************************************************************/
