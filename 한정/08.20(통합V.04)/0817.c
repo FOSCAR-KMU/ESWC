@@ -114,6 +114,7 @@ volatile passing_lane_flag = 0; //7
 
 // 6, 7 : 정지선 인식
 volatile float traffic_light_flag = 0; // 8
+volatile int noused = 1;
 // 0 : 신호등 인식 전
 // 1 : 좌회전
 // 2 : 우회전
@@ -1602,7 +1603,7 @@ void rightRotate(){
 
 void mode_traffic_light(){
 
-  printf("flag %d\n", traffic_light_flag);
+  printf("flag %f\n", traffic_light_flag);
 
 
   if(traffic_light_flag == 0){
@@ -1616,18 +1617,22 @@ void mode_traffic_light(){
 
   float temp_flag = traffic_light_flag;
   short temp_speed = 30;
-  short temp_steering = (int)(temp_flag * 10) % 10;
-  if(temp_flag >= 1. && temp_flag < 3.){
+  int temp_steering = (int)(temp_flag * 10) % 10;
+  
+  if(noused && temp_flag >= 1. && temp_flag < 3.){
     if(temp_steering == 1)
       SteeringServoControl_Write(2000); 
     else
       SteeringServoControl_Write(1000);
     
-    short temp_time = temp_flag * 10 - (int)(temp_flag * 10);
-    temp_time *= 10000000;
+    float temp_time = temp_flag * 10 - (int)(temp_flag * 10);
+    temp_time *= 1000;//500
     DesireSpeed_Write(speed);
-    usleep(temp_time); 
+    usleep((int)temp_time * 1000);
+    noused = 0; 
   }
+  printf("usleep : %d\n", (int)traffic_light_flag);
+    
   if((int)traffic_light_flag == 1){
     speed = 30;
     DesireSpeed_Write(speed);

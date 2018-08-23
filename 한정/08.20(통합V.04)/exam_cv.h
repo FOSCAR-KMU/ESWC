@@ -22,7 +22,7 @@ int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* out
 int is_yellow_horizental(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh);
 
 //신호등 진입 판단 함수
-int traffic_light(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh, int centerP[]);
+float traffic_light(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh, int centerP[]);
 
 
 #ifdef __cplusplus
