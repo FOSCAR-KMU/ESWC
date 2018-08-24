@@ -59,8 +59,6 @@ void get_center_point(Mat& binaryImg, Point * p);
 int* find_points(Mat oriImg);
 Mat top_view_transform(Mat img, int* four_point);
 
-bool i_flag = true;
-
 /*******************신호등 전역변수*********************/
 Point2f v[2];
 bool check[2] = { false, };
@@ -290,7 +288,6 @@ int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* out
   bool flag;
   
   temp = find_points(srcRGB);
-  if(i_flag == false) return 1;
   oriImg = top_view_transform(srcRGB, temp);
 
   roiImg = oriImg(Rect(0, oriImg.rows/3, oriImg.cols, oriImg.rows / 3 * 2));
@@ -895,12 +892,11 @@ int* find_points(Mat oriImg)
   right_error = hough_right(cannyImg2, rightROI, &p3, &p4);
 
   int result[8];
-  i_flag = true;
 
-  i_flag = i_flag && get_intersectpoint(p1, p2, Point(0, 0), Point(oriImg.cols, 0), &i_p1);
-  i_flag = i_flag && get_intersectpoint(p1, p2, Point(0, oriImg.rows), Point(oriImg.cols, oriImg.rows), &i_p2);
-  i_flag = i_flag && get_intersectpoint(Point(p3.x + 160, p3.y), Point(p4.x + 160, p4.y), Point(0, 0), Point(oriImg.cols, 0), &i_p3);
-  i_flag = i_flag && get_intersectpoint(Point(p3.x + 160, p3.y), Point(p4.x + 160, p4.y), Point(0, oriImg.rows), Point(oriImg.cols, oriImg.rows), &i_p4);
+  get_intersectpoint(p1, p2, Point(0, 0), Point(oriImg.cols, 0), &i_p1);
+  get_intersectpoint(p1, p2, Point(0, oriImg.rows), Point(oriImg.cols, oriImg.rows), &i_p2);
+  get_intersectpoint(Point(p3.x + 160, p3.y), Point(p4.x + 160, p4.y), Point(0, 0), Point(oriImg.cols, 0), &i_p3);
+  get_intersectpoint(Point(p3.x + 160, p3.y), Point(p4.x + 160, p4.y), Point(0, oriImg.rows), Point(oriImg.cols, oriImg.rows), &i_p4);
 
   result[0] = i_p1.x;
   result[1] = i_p1.y;

@@ -218,6 +218,7 @@ void check_end();
 
 volatile int return_flag = 0;
 volatile int yellow_count = 0;
+volatile int lane_check_count = 0;
 
 ///////////////////////////////////////////////////////////////////
 
@@ -406,6 +407,8 @@ static void passing_lane_decision(struct display *disp, struct buffer *cambuf)
     uint32_t optime;
     struct timeval st, et;
 
+    four_point = (int*)malloc(sizeof(int)*8);
+
     unsigned char* cam_pbuf[4];
     if(get_framebuf(cambuf, cam_pbuf) == 0) {
         memcpy(srcbuf, cam_pbuf[0], VPE_OUTPUT_W*VPE_OUTPUT_H*3);
@@ -561,7 +564,7 @@ void * capture_thread(void *arg)
 
             if(passing_lane_flag == 1){
               driveOnOff = 0;
-              passing_lane_decision(vpe->disp, capt);
+              // passing_lane_decision(vpe->disp, capt);
             }
             else if(passing_lane_flag == 4 || passing_lane_flag == 5){
               is_yellow_line(vpe->disp, capt);
@@ -1480,20 +1483,21 @@ void return_from_left_lane(){
 
 }
 
+void lane_check()
+{
+  
+}
 
 
 
 void mode_passing_lane()
 {
-
   printf("%d\n", passing_lane_flag);
-  printf("p1 %d %d p2 %d %d p3 %d %d p4 %d %d", four_point[0], four_point[1], four_point[2], four_point[3], four_point[4], four_point[5], four_point[6], four_point[7]);
 	if(passing_lane_flag == 0){
 	  passing_lane_flag = is_passing_lane();
 	}
 	else if(passing_lane_flag == 1){
-    DesireSpeed_Write(-10);
-    steeringServoControl_Write(1500);
+    lane_check();
 		printf("...판별중...\n");
 	}
 	else if(passing_lane_flag == 2){
@@ -1761,7 +1765,6 @@ int main(int argc, char **argv)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-  four_point = (int*)malloc(sizeof(int)*8);
   CarControlInit();
 
   cameraY = 1630;
