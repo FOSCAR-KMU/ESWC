@@ -406,8 +406,6 @@ static void passing_lane_decision(struct display *disp, struct buffer *cambuf)
     uint32_t optime;
     struct timeval st, et;
 
-    four_point = (int*)malloc(sizeof(int)*8);
-
     unsigned char* cam_pbuf[4];
     if(get_framebuf(cambuf, cam_pbuf) == 0) {
         memcpy(srcbuf, cam_pbuf[0], VPE_OUTPUT_W*VPE_OUTPUT_H*3);
@@ -1761,6 +1759,7 @@ int main(int argc, char **argv)
 
 ///////////////////////////////////////////////////////////////////////////////
 
+  four_point = (int*)malloc(sizeof(int)*8);
   CarControlInit();
 
   cameraY = 1630;
