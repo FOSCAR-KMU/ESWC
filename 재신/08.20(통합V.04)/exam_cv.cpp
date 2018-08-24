@@ -897,10 +897,10 @@ int* find_points(Mat oriImg)
   int result[8];
   i_flag = true;
 
-  i_flag = i_flag && get_intersectpoint(p1, p2, Point(0, 0), Point(oriImg.cols, 0), &i_p1);
-  i_flag = i_flag && get_intersectpoint(p1, p2, Point(0, oriImg.rows), Point(oriImg.cols, oriImg.rows), &i_p2);
-  i_flag = i_flag && get_intersectpoint(Point(p3.x + 160, p3.y), Point(p4.x + 160, p4.y), Point(0, 0), Point(oriImg.cols, 0), &i_p3);
-  i_flag = i_flag && get_intersectpoint(Point(p3.x + 160, p3.y), Point(p4.x + 160, p4.y), Point(0, oriImg.rows), Point(oriImg.cols, oriImg.rows), &i_p4);
+  i_flag = i_flag && get_intersectpoint(p1, p2, Point(0, 0), Point(oriImg.cols, 0), &i_p1) 
+                  && get_intersectpoint(p1, p2, Point(0, oriImg.rows), Point(oriImg.cols, oriImg.rows), &i_p2)
+                  && get_intersectpoint(Point(p3.x + 160, p3.y), Point(p4.x + 160, p4.y), Point(0, 0), Point(oriImg.cols, 0), &i_p3)
+                  && get_intersectpoint(Point(p3.x + 160, p3.y), Point(p4.x + 160, p4.y), Point(0, oriImg.rows), Point(oriImg.cols, oriImg.rows), &i_p4);
 
   result[0] = i_p1.x;
   result[1] = i_p1.y;
