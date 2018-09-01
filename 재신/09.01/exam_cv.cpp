@@ -59,9 +59,6 @@ void get_center_point(Mat& binaryImg, Point * p);
 int* find_points(Mat oriImg);
 Mat top_view_transform(Mat img, int* four_point);
 
-bool i_flag = true;
-int result[15];
-
 
 /*******************신호등 전역변수*********************/
 Point2f v[2];
@@ -305,7 +302,7 @@ int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* out
   cvtColor(leftROI, hsvImg1, CV_BGR2HSV);
   cvtColor(rightROI, hsvImg2, CV_BGR2HSV);
 
-  
+
   inRange(leftROI, RGB_WHITE_LOWER, RGB_WHITE_UPPER, binaryImg1);
   inRange(rightROI, RGB_WHITE_LOWER, RGB_WHITE_UPPER, binaryImg2);
   // inRange(hsvImg1, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, binaryImg3);
@@ -313,7 +310,7 @@ int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* out
 
   // binaryImg1 = binaryImg1 ^ binaryImg3;
   // binaryImg2 = binaryImg2 ^ binaryImg4;
-  
+
   Canny(binaryImg1, cannyImg1, 150, 250);
   Canny(binaryImg2, cannyImg2, 150, 250);
 
@@ -327,7 +324,7 @@ int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* out
 
   // i_flag = true;
 
-  // i_flag = i_flag && get_intersectpoint(p1, p2, Point(0, 0), Point(oriImg.cols, 0), &i_p1) 
+  // i_flag = i_flag && get_intersectpoint(p1, p2, Point(0, 0), Point(oriImg.cols, 0), &i_p1)
   //                 && get_intersectpoint(p1, p2, Point(0, oriImg.rows), Point(oriImg.cols, oriImg.rows), &i_p2)
   //                 && get_intersectpoint(Point(p3.x + 160, p3.y), Point(p4.x + 160, p4.y), Point(0, 0), Point(oriImg.cols, 0), &i_p3)
   //                 && get_intersectpoint(Point(p3.x + 160, p3.y), Point(p4.x + 160, p4.y), Point(0, oriImg.rows), Point(oriImg.cols, oriImg.rows), &i_p4);
@@ -341,16 +338,16 @@ int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* out
   temp[6]  = p4.x;
   temp[7]  = p4.y;
 
-  
+
 
   int cnt = 0;
   bool flag;
-  
-  
+
+
   // temp = find_points(srcRGB);
-  
+
   // inRange(srcRGB, RGB_WHITE_LOWER, RGB_WHITE_UPPER, tempImg);
-  
+
 
   // if(i_flag == false) return 1;
   // oriImg = top_view_transform(srcRGB, temp);
@@ -360,21 +357,21 @@ int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* out
   cvtColor(roiImg, yuvImg, CV_BGR2YUV);
 
   inRange(yuvImg, YUV_LOWER, YUV_UPPER, binaryImg);
-  
+
   cvtColor(binaryImg, resRGB, CV_GRAY2BGR);
   resize(resRGB, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
 
 
   int count[2] = { 0,  0};
 
-  
-  
+
+
   if(!left_error)
   {
     float a = (float)(p2.y - p1.y)/(float)(p2.x - p1.x);
     float b = (float)(p1.y - a * (float)p1.x);
-    
-    
+
+
     for(int i = 0 ; i < binaryImg.rows ; i++)
     {
       for(int j = 0; j < binaryImg.cols ; j++)
@@ -977,7 +974,7 @@ int* find_points(Mat oriImg)
   // inRange(hsvImg2, HSV_WHITE_LOWER, HSV_WHITE_UPPER, binaryImg2);
   inRange(leftROI, RGB_WHITE_LOWER, RGB_WHITE_UPPER, binaryImg1);
   inRange(rightROI, RGB_WHITE_LOWER, RGB_WHITE_UPPER, binaryImg2);
-  
+
 
 
   Canny(binaryImg1, cannyImg1, 150, 250);
@@ -988,7 +985,7 @@ int* find_points(Mat oriImg)
 
   i_flag = true;
 
-  i_flag = i_flag && get_intersectpoint(p1, p2, Point(0, 0), Point(oriImg.cols, 0), &i_p1) 
+  i_flag = i_flag && get_intersectpoint(p1, p2, Point(0, 0), Point(oriImg.cols, 0), &i_p1)
                   && get_intersectpoint(p1, p2, Point(0, oriImg.rows), Point(oriImg.cols, oriImg.rows), &i_p2)
                   && get_intersectpoint(Point(p3.x + 160, p3.y), Point(p4.x + 160, p4.y), Point(0, 0), Point(oriImg.cols, 0), &i_p3)
                   && get_intersectpoint(Point(p3.x + 160, p3.y), Point(p4.x + 160, p4.y), Point(0, oriImg.rows), Point(oriImg.cols, oriImg.rows), &i_p4);
@@ -1010,7 +1007,7 @@ int* find_points(Mat oriImg)
   result[14] = p4.x;
   result[15] = p4.y;
 
-  
+
 
   return result;
 
