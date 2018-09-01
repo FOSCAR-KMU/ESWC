@@ -21,7 +21,7 @@ const Scalar COLOR_RED = Scalar(0, 0, 255);
 const Scalar COLOR_GREEN = Scalar(170, 170, 0);
 
 
-const Vec3b RGB_WHITE_LOWER = Vec3b(100, 100, 180);
+const Vec3b RGB_WHITE_LOWER = Vec3b(180, 180, 180);
 const Vec3b RGB_WHITE_UPPER = Vec3b(255, 255, 255);
 
 const Vec3b HSV_YELLOW_LOWER = Vec3b(20, 40, 130);
@@ -41,8 +41,8 @@ const Vec3b HSV_GREEN_UPPER = Vec3b(110, 255, 255);
 const Vec3b HSV_BLACK_LOWER = Vec3b(0, 0, 0);
 const Vec3b HSV_BLACK_UPPER = Vec3b(180, 255, 50);
 
-const Vec3b YUV_LOWER = Vec3b(10, 110, 120);
-const Vec3b YUV_UPPER = Vec3b(70, 130, 140);
+const Vec3b YUV_LOWER = Vec3b(0, 110, 120);
+const Vec3b YUV_UPPER = Vec3b(30, 130, 140);
 
 const int Unexpected_Obstacle_Threshold = 5000;
 const int stop_line_threshold = 300;
@@ -60,6 +60,8 @@ int* find_points(Mat oriImg);
 Mat top_view_transform(Mat img, int* four_point);
 
 bool i_flag = true;
+int result[15];
+
 
 /*******************신호등 전역변수*********************/
 Point2f v[2];
@@ -275,7 +277,7 @@ int enter_the_rotary(unsigned char* srcBuf, int iw, int ih, unsigned char* outBu
 
 }
 
-int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh, int *temp){
+int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh, int temp[], float temp2[]){
 
   Mat srcRGB(ih, iw, CV_8UC3, srcBuf); //input
   Mat dstRGB(nh, nw, CV_8UC3, outBuf); //output
@@ -286,42 +288,129 @@ int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* out
   Mat yuvImg;
   Mat binaryImg;
 
+  Point p1, p2, p3, p4;
+  Point i_p1, i_p2, i_p3, i_p4;
+
+  bool left_error = true;
+  bool right_error = true;
+
+  Mat leftROI, rightROI;
+  Mat hsvImg1, hsvImg2;
+  Mat binaryImg1, binaryImg2, binaryImg3, binaryImg4;
+  Mat cannyImg1, cannyImg2;
+
+  leftROI = srcRGB(Rect(0, srcRGB.rows/3, srcRGB.cols/2, srcRGB.rows/3 * 2));
+  rightROI = srcRGB(Rect(srcRGB.cols/2, srcRGB.rows/ 3, srcRGB.cols/2, srcRGB.rows/3 * 2));
+
+  cvtColor(leftROI, hsvImg1, CV_BGR2HSV);
+  cvtColor(rightROI, hsvImg2, CV_BGR2HSV);
+
+  
+  inRange(leftROI, RGB_WHITE_LOWER, RGB_WHITE_UPPER, binaryImg1);
+  inRange(rightROI, RGB_WHITE_LOWER, RGB_WHITE_UPPER, binaryImg2);
+  // inRange(hsvImg1, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, binaryImg3);
+  // inRange(hsvImg2, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, binaryImg4);
+
+  // binaryImg1 = binaryImg1 ^ binaryImg3;
+  // binaryImg2 = binaryImg2 ^ binaryImg4;
+  
+  Canny(binaryImg1, cannyImg1, 150, 250);
+  Canny(binaryImg2, cannyImg2, 150, 250);
+
+  // hconcat(binaryImg1, binaryImg2, tempImg);
+  // hconcat(cannyImg1, cannyImg2, tempImg);
+
+  left_error = hough_left(cannyImg1, leftROI, &p1, &p2);
+  right_error = hough_right(cannyImg2, rightROI, &p3, &p4);
+
+  if(left_error && right_error) return 1;
+
+  // i_flag = true;
+
+  // i_flag = i_flag && get_intersectpoint(p1, p2, Point(0, 0), Point(oriImg.cols, 0), &i_p1) 
+  //                 && get_intersectpoint(p1, p2, Point(0, oriImg.rows), Point(oriImg.cols, oriImg.rows), &i_p2)
+  //                 && get_intersectpoint(Point(p3.x + 160, p3.y), Point(p4.x + 160, p4.y), Point(0, 0), Point(oriImg.cols, 0), &i_p3)
+  //                 && get_intersectpoint(Point(p3.x + 160, p3.y), Point(p4.x + 160, p4.y), Point(0, oriImg.rows), Point(oriImg.cols, oriImg.rows), &i_p4);
+
+  temp[0]  = p1.x;
+  temp[1]  = p1.y;
+  temp[2]  = p2.x;
+  temp[3]  = p2.y;
+  temp[4]  = p3.x;
+  temp[5]  = p3.y;
+  temp[6]  = p4.x;
+  temp[7]  = p4.y;
+
+  
+
   int cnt = 0;
   bool flag;
   
-  temp = find_points(srcRGB);
-  if(i_flag == false) return 1;
-  oriImg = top_view_transform(srcRGB, temp);
+  
+  // temp = find_points(srcRGB);
+  
+  // inRange(srcRGB, RGB_WHITE_LOWER, RGB_WHITE_UPPER, tempImg);
+  
 
-  roiImg = oriImg(Rect(0, oriImg.rows/3, oriImg.cols, oriImg.rows / 3 * 2));
+  // if(i_flag == false) return 1;
+  // oriImg = top_view_transform(srcRGB, temp);
+
+  roiImg = srcRGB(Rect(0, srcRGB.rows/3, srcRGB.cols, srcRGB.rows / 3 * 2));
 
   cvtColor(roiImg, yuvImg, CV_BGR2YUV);
 
   inRange(yuvImg, YUV_LOWER, YUV_UPPER, binaryImg);
+  
+  cvtColor(binaryImg, resRGB, CV_GRAY2BGR);
+  resize(resRGB, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
+
 
   int count[2] = { 0,  0};
 
-  for(int i = 0 ; i < binaryImg.rows ; i++){
-    for(int j = 0; j < binaryImg.cols / 2 ; j++){
-      if(binaryImg.at<uchar>(i, j) == 255) count[0]++;
+  
+  
+  if(!left_error)
+  {
+    float a = (float)(p2.y - p1.y)/(float)(p2.x - p1.x);
+    float b = (float)(p1.y - a * (float)p1.x);
+    
+    
+    for(int i = 0 ; i < binaryImg.rows ; i++)
+    {
+      for(int j = 0; j < binaryImg.cols ; j++)
+      {
+        if(binaryImg.at<uchar>(i, j) == 255 && a * j + b > i) count[0]++;
+      }
     }
-    for(int j = binaryImg.cols /2 ; j < binaryImg.cols; j++){
-      if(binaryImg.at<uchar>(i, j) == 255) count[1]++;
+    temp2[0] = a;
+    temp2[1] = b;
+
+    temp[10] = count[0];
+    temp[11] = count[1];
+    if(count[0] < 300) return 3;
+    else return 2;
+    // return 1;
+  }
+  else if(!right_error)
+  {
+    float a = (float)(p4.y - p3.y)/(float)(p4.x - p3.x);
+    float b = (float)(p3.y - a * (float)p3.x);
+    for(int i = 0 ; i < binaryImg.rows ; i++)
+    {
+      for(int j = 0; j < binaryImg.cols ; j++)
+      {
+        if(binaryImg.at<uchar>(i, j) == 255 && a * j + b > i) count[1]++;
+      }
     }
+    temp2[0] = a;
+    temp2[1] = b;
+    temp[10] = count[0];
+    temp[11] = count[1];
+    if(count[1] < 300) return 2;
+    else return 3;
+    // return 1;
   }
 
-
-
-  cvtColor(binaryImg, binaryImg, CV_GRAY2BGR);
-  resize(binaryImg, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
-
-
-  if(count[0] > count[1]){
-    return 2;
-  }
-  else{
-    return 3;
-  }
 }
 
 int traffic_light(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh, int centerP[]){
@@ -878,14 +967,17 @@ int* find_points(Mat oriImg)
   Mat binaryImg1, binaryImg2, binaryImg3, binaryImg4;
   Mat cannyImg1, cannyImg2;
 
-  leftROI = oriImg(Rect(0, oriImg.rows/3 * 2, oriImg.cols/2, oriImg.rows/3));
-  rightROI = oriImg(Rect(oriImg.cols/2, oriImg.rows/3 * 2, oriImg.cols/2, oriImg.rows/3));
+  leftROI = oriImg(Rect(0, oriImg.rows/2, oriImg.cols/2, oriImg.rows/2));
+  rightROI = oriImg(Rect(oriImg.cols/2, oriImg.rows/ 2, oriImg.cols/2, oriImg.rows/2));
 
-  cvtColor(leftROI, hsvImg1, CV_BGR2HSV);
-  cvtColor(rightROI, hsvImg2, CV_BGR2HSV);
+  // cvtColor(leftROI, hsvImg1, CV_BGR2HSV);
+  // cvtColor(rightROI, hsvImg2, CV_BGR2HSV);
 
-  inRange(hsvImg1, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, binaryImg1);
-  inRange(hsvImg2, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, binaryImg2);
+  // inRange(hsvImg1, HSV_WHITE_LOWER, HSV_WHITE_UPPER, binaryImg1);
+  // inRange(hsvImg2, HSV_WHITE_LOWER, HSV_WHITE_UPPER, binaryImg2);
+  inRange(leftROI, RGB_WHITE_LOWER, RGB_WHITE_UPPER, binaryImg1);
+  inRange(rightROI, RGB_WHITE_LOWER, RGB_WHITE_UPPER, binaryImg2);
+  
 
 
   Canny(binaryImg1, cannyImg1, 150, 250);
@@ -894,7 +986,6 @@ int* find_points(Mat oriImg)
   left_error = hough_left(cannyImg1, leftROI, &p1, &p2);
   right_error = hough_right(cannyImg2, rightROI, &p3, &p4);
 
-  int result[8];
   i_flag = true;
 
   i_flag = i_flag && get_intersectpoint(p1, p2, Point(0, 0), Point(oriImg.cols, 0), &i_p1) 
@@ -902,14 +993,24 @@ int* find_points(Mat oriImg)
                   && get_intersectpoint(Point(p3.x + 160, p3.y), Point(p4.x + 160, p4.y), Point(0, 0), Point(oriImg.cols, 0), &i_p3)
                   && get_intersectpoint(Point(p3.x + 160, p3.y), Point(p4.x + 160, p4.y), Point(0, oriImg.rows), Point(oriImg.cols, oriImg.rows), &i_p4);
 
-  result[0] = i_p1.x;
-  result[1] = i_p1.y;
-  result[2] = i_p2.x;
-  result[3] = i_p1.y;
-  result[4] = i_p3.x;
-  result[5] = i_p1.y;
-  result[6] = i_p4.x;
-  result[7] = i_p1.y;
+  result[0]  = i_p1.x;
+  result[1]  = i_p1.y;
+  result[2]  = i_p2.x;
+  result[3]  = i_p2.y;
+  result[4]  = i_p3.x;
+  result[5]  = i_p3.y;
+  result[6]  = i_p4.x;
+  result[7]  = i_p4.y;
+  result[8]  = p1.x;
+  result[9]  = p1.y;
+  result[10] = p2.x;
+  result[11] = p2.y;
+  result[12] = p3.x;
+  result[13] = p3.y;
+  result[14] = p4.x;
+  result[15] = p4.y;
+
+  
 
   return result;
 

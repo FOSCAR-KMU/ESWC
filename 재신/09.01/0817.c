@@ -65,7 +65,8 @@ int tol;
 int i, j;
 char byte = 0x80;
 
-int* four_point;
+volatile int four_point[16] = {};
+volatile float ab[2] = {};
 
 volatile int angle = 1520;  //조향값
 volatile int temp_angle;
@@ -412,7 +413,7 @@ static void passing_lane_decision(struct display *disp, struct buffer *cambuf)
 
         gettimeofday(&st, NULL);
 
-        passing_lane_flag = passing_lane_check(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, four_point);
+        passing_lane_flag = passing_lane_check(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, four_point, ab);
 
         gettimeofday(&et, NULL);
         optime = ((et.tv_sec - st.tv_sec)*1000)+ ((int)et.tv_usec/1000 - (int)st.tv_usec/1000);
@@ -1379,9 +1380,9 @@ int is_passing_lane()
 	debug = (27.61 / (volt - 0.1696)) * 1000;
 
 	if(debug < 50){
-		CameraYServoControl_Write(1500);
-		DesireSpeed_Write(0);
-		usleep(500000);
+		// CameraYServoControl_Write(1500);
+		DesireSpeed_Write(-20);
+    usleep(2000000);
 		return 1;
 	}
 	else return 0;
@@ -1487,22 +1488,29 @@ void mode_passing_lane()
 {
 
   printf("%d\n", passing_lane_flag);
-  printf("p1 %d %d p2 %d %d p3 %d %d p4 %d %d", four_point[0], four_point[1], four_point[2], four_point[3], four_point[4], four_point[5], four_point[6], four_point[7]);
+  
+  
 	if(passing_lane_flag == 0){
 	  passing_lane_flag = is_passing_lane();
 	}
 	else if(passing_lane_flag == 1){
-    DesireSpeed_Write(-10);
-    steeringServoControl_Write(1500);
+    SteeringServoControl_Write(1520);
 		printf("...판별중...\n");
+    printf("count : %d\n", four_point[10]);
 	}
 	else if(passing_lane_flag == 2){
+    printf("점 : p1 %d %d p2 %d %d p3 %d %d p4 %d %d\n", four_point[0], four_point[1], four_point[2], four_point[3], four_point[4], four_point[5], four_point[6], four_point[7]);
+    printf("count : %d %d\n", four_point[10], four_point[11]);
+    printf("%lf %lf \n", ab[0], ab[1]);
 		CameraYServoControl_Write(1630);
 		DesireSpeed_Write(50);
 		printf("...오른쪽으로...\n");
 		go_right();
 	}
 	else if(passing_lane_flag == 3){
+    printf("점 : p1 %d %d p2 %d %d p3 %d %d p4 %d %d\n", four_point[0], four_point[1], four_point[2], four_point[3], four_point[4], four_point[5], four_point[6], four_point[7]);
+    printf("count : %d %d\n", four_point[10], four_point[11]);
+    printf("%lf %lf \n", ab[0], ab[1]);
 		CameraYServoControl_Write(1630);
 		DesireSpeed_Write(50);
 		printf("...왼쪽으로...\n");
@@ -1761,7 +1769,7 @@ int main(int argc, char **argv)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-  four_point = (int*)malloc(sizeof(int)*8);
+  // four_point = (int*)malloc(sizeof(int)*8);
   CarControlInit();
 
   cameraY = 1630;

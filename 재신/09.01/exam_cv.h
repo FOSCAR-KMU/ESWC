@@ -18,7 +18,7 @@ int stop_line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* out
 int enter_the_rotary(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh);
 
 // 추월 차선 확인
-int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh, int* temp);
+int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh, int temp[], float temp2[]);
 int is_yellow_horizental(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh);
 
 //신호등 진입 판단 함수
