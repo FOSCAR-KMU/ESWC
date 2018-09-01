@@ -580,8 +580,6 @@ void * capture_thread(void *arg)
           case 4 :  // 주차
             driveOnOff = 1;
             if(parking_flag == 3 || parking_flag == 4) driveOnOff = 0;
-
-            if(driveOnOff == 1) printf("lane tracing\n");
             break;
           case 5 :  // 회전 교차로
             driveOnOff = 1;
@@ -611,9 +609,6 @@ void * capture_thread(void *arg)
             driveOnOff = 0;
             if(traffic_light_flag < 1){
               trafficLightMission(vpe->disp, capt);
-            }
-            else if(traffic_light_flag == 1 || traffic_light_flag == 2){
-              is_yellow_line(vpe->disp, capt);
             }
             break;
         }
