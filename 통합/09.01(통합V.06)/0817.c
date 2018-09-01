@@ -47,7 +47,7 @@
 
 ////////////////////////////////////////////////////////////////////////////////////
 
-volatile int mode = 5;
+volatile int mode = 0;
 
 volatile bool cameraOnOff = 0;
 volatile bool driveOnOff = 0;
@@ -64,6 +64,9 @@ char sensor;
 int tol;
 int i, j;
 char byte = 0x80;
+
+volatile int four_point[16] = {};
+volatile float ab[2] = {};
 
 volatile int angle = 1520;  //조향값
 volatile int temp_angle;
@@ -104,7 +107,7 @@ volatile int tunnel_flag = 0; // 6
 // 1 : 터널 주행 중
 // 2 : 터널 탈출 후
 
-volatile passing_lane_flag = 0; //7
+volatile passing_lane_flag = 6; //7
 // 0 : 가운데 차 인식 전
 // 1 : 가운데 차 인식 후 진행방향 결정
 // 2 : 왼쪽에 차 있음(우조향)
@@ -131,6 +134,8 @@ volatile int finish_flag = 0;
 
 volatile float slope[2] = {};
 volatile int centerP[6] = {};
+volatile float horizon_slope;
+
 
 
 //////////////////// 센서 값 변환 관련  /////////////////////////
@@ -218,8 +223,7 @@ void mode_tunnel();
 
 //////////////////////////추월 차선/////////////////////////////////
 
-volatile int return_flag = 0;
-volatile int yellow_count = 0;
+volatile bool is_return = false;
 
 int is_passing_lane();
 void go_left();
@@ -229,6 +233,7 @@ void return_from_right_lane();
 void mode_passing_lane();
 
 ///////////////////////////// 신호등 //////////////////////////////
+volatile bool check_yellow_line = false;
 
 void left_rotate();
 void right_rotate();
@@ -361,10 +366,7 @@ static void drive(struct display *disp, struct buffer *cambuf)
           temp_angle = line_detector(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, slope, 5);
         }
         else if(mode == 7 && passing_lane_flag == 0){
-          temp_angle = line_detector(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, slope, 5);
-          if(temp_angle <= 1520){
-            temp_angle = 1600;
-          }
+          temp_angle = line_detector(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, slope, 4);
         }
         else if(mode == 7 && passing_lane_flag == 4 || passing_lane_flag == 5){
           temp_angle = line_detector(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, slope, 5);
@@ -420,7 +422,7 @@ static void passing_lane_decision(struct display *disp, struct buffer *cambuf)
 
         gettimeofday(&st, NULL);
 
-        passing_lane_flag = passing_lane_check(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H);
+        passing_lane_flag = passing_lane_check(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, four_point, ab);
 
         gettimeofday(&et, NULL);
         optime = ((et.tv_sec - st.tv_sec)*1000)+ ((int)et.tv_usec/1000 - (int)st.tv_usec/1000);
@@ -440,7 +442,14 @@ static void is_yellow_line(struct display *disp, struct buffer *cambuf)
 
         gettimeofday(&st, NULL);
 
-        yellow_count = is_yellow_horizental(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H);
+
+        if(mode == 7){
+          is_return = is_yellow_horizental(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, 1);
+        }
+        else{
+          check_yellow_line = is_yellow_horizental(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, 2);
+        }
+
 
         gettimeofday(&et, NULL);
         optime = ((et.tv_sec - st.tv_sec)*1000)+ ((int)et.tv_usec/1000 - (int)st.tv_usec/1000);
@@ -563,7 +572,6 @@ void * capture_thread(void *arg)
             driveOnOff = 1;
             if(parking_flag == 3 || parking_flag == 4) driveOnOff = 0;
 
-            if(driveOnOff == 1) printf("lane tracing\n");
             break;
           case 5 :  // 회전 교차로
             driveOnOff = 1;
@@ -587,6 +595,11 @@ void * capture_thread(void *arg)
             if(passing_lane_flag == 1){
               driveOnOff = 0;
               passing_lane_decision(vpe->disp, capt);
+            }
+            else if(passing_lane_flag == 4 || passing_lane_flag == 5){
+              is_yellow_line(vpe->disp, capt);
+              driveOnOff = 1;
+
             }
           break;
           case 8 : // 신호등
@@ -785,7 +798,7 @@ bool is_stop()               // 정지선 인식 함수
 {
   int flag = 0;
   sensor = LineSensor_Read();   // black:1, white:0
-  printf("LineSensor_Read() = ");
+  // printf("LineSensor_Read() = ");
 
   for(i = 0; i < 8; i++){
     if((i % 4) == 0) printf(" ");
@@ -797,8 +810,8 @@ bool is_stop()               // 정지선 인식 함수
     sensor = sensor << 1;
   }
 
-  printf("\n");
-  printf("flag : %d\n", flag);
+  // printf("\n");
+  // printf("flag : %d\n", flag);
 
   if(flag >= 3){
     printf("LineSensor_Read() = STOP! \n");
@@ -1213,7 +1226,7 @@ void mode_rotary()
       printf("rotaty_start!!!");
       CameraYServoControl_Write(1700);
       rotary_flag = 2; // 회전교차로 진입 후
-      speed = 40;
+      speed = 10;
       DesireSpeed_Write(speed);
     }
     else if(rotary_ready_flag == 0){
@@ -1298,6 +1311,7 @@ void mode_tunnel()
     DesireSpeed_Write(0);
     usleep(500000);
     DesireSpeed_Write(50);
+    CameraYServoControl_Write(1700);
   }
 }
 
@@ -1308,9 +1322,10 @@ int is_passing_lane()
 {
   dist = get_distance(1);
 
-	if(dist < 50){
-		DesireSpeed_Write(0);
-		usleep(500000);
+	if(dist < 40){
+    SteeringServoControl_Write(1520);
+		DesireSpeed_Write(-50);
+		usleep(1500000);
 		return 1;
 	}
 	return 0;
@@ -1318,23 +1333,23 @@ int is_passing_lane()
 
 void go_right()
 {
-	SteeringServoControl_Write(1000);
+	SteeringServoControl_Write(1100);
   usleep(2000000);
 	passing_lane_flag = 4;
 }
 
 void go_left()
 {
-	SteeringServoControl_Write(2000);
+	SteeringServoControl_Write(1900);
   usleep(2000000);
   passing_lane_flag = 5;
 }
 
 void return_from_right_lane(){
 
-  dist = get_distance(6);
-  if(return_flag == 0 && dist < 100) return_flag = 1;
-  else if(return_flag == 1 && dist > 100){
+  if(is_return){
+    DesireSpeed_Write(-100);
+    usleep(500000);
     DesireSpeed_Write(50);
     SteeringServoControl_Write(2000);
     usleep(2000000);
@@ -1344,9 +1359,9 @@ void return_from_right_lane(){
 
 void return_from_left_lane()
 {
-  dist = get_distance(2);
-  if(return_flag == 0 && dist < 100) return_flag = 1;
-  else if(return_flag == 1 && dist > 100){
+  if(is_return){
+    DesireSpeed_Write(-100);
+    usleep(500000);
     DesireSpeed_Write(50);
     SteeringServoControl_Write(1000);
     usleep(2000000);
@@ -1356,7 +1371,8 @@ void return_from_left_lane()
 
 void mode_passing_lane()
 {
-  printf("%d\n", passing_lane_flag);
+  // printf("%d\n", passing_lane_flag);
+  // printf("%d\n", is_return);
 	if(passing_lane_flag == 0){
 	  passing_lane_flag = is_passing_lane();
 	}
@@ -1364,12 +1380,18 @@ void mode_passing_lane()
 		printf("...판별중...\n");
 	}
 	else if(passing_lane_flag == 2){
+    printf("점 : p1 %d %d p2 %d %d p3 %d %d p4 %d %d\n", four_point[0], four_point[1], four_point[2], four_point[3], four_point[4], four_point[5], four_point[6], four_point[7]);
+    printf("count : %d %d\n", four_point[10], four_point[11]);
+    printf("%lf %lf \n", ab[0], ab[1]);
 		CameraYServoControl_Write(1630);
 		DesireSpeed_Write(50);
 		printf("...오른쪽으로...\n");
 		go_right();
 	}
 	else if(passing_lane_flag == 3){
+    printf("점 : p1 %d %d p2 %d %d p3 %d %d p4 %d %d\n", four_point[0], four_point[1], four_point[2], four_point[3], four_point[4], four_point[5], four_point[6], four_point[7]);
+    printf("count : %d %d\n", four_point[10], four_point[11]);
+    printf("%lf %lf \n", ab[0], ab[1]);
 		CameraYServoControl_Write(1630);
 		DesireSpeed_Write(50);
 		printf("...왼쪽으로...\n");
@@ -1399,19 +1421,19 @@ void mode_passing_lane()
 
 void left_rotate(){
 
-  dist = get_distance(1);
-
-  if(dist < 50){
+  if(check_yellow_line){
 
     SteeringServoControl_Write(2000);
 
-      while(1){
-        dist = get_distance(3);
-        if(dist < 50) break;
-      }
+    while(1){
+      dist = get_distance(3);
 
-      traffic_light_flag = 4;
-      SteeringServoControl_Write(1800);
+      if(dist < 50) break;
+    }
+
+    traffic_light_flag = 4;
+    SteeringServoControl_Write(1900);
+
   }
 
 
@@ -1419,21 +1441,18 @@ void left_rotate(){
 }
 
 void right_rotate(){
-  dist = get_distance(1);
-
-  if(dist < 50){
+  if(check_yellow_line){
 
     SteeringServoControl_Write(1000);
-
     while(1){
       dist = get_distance(5);
       if(dist < 50) break;
     }
 
     traffic_light_flag = 4;
-    SteeringServoControl_Write(1200);
-  }
+    SteeringServoControl_Write(1100);
 
+  }
 
 }
 
@@ -1441,9 +1460,7 @@ void mode_traffic_light(){
 
   printf("flag %d\n", traffic_light_flag);
 
-  if(traffic_light_flag == 0){
-    speed = 0; // speed set     --> speed must be set when using position controller
-    DesireSpeed_Write(speed);
+  if(traffic_light_flag < 1){
 
     printf("red : %d, %d", centerP[0], centerP[1]);
     printf("yellow : %d, %d", centerP[2], centerP[3]);
@@ -1564,7 +1581,7 @@ int main(int argc, char **argv)
   CameraYServoControl_Write(cameraY);
 
   SpeedControlOnOff_Write(CONTROL);   // speed controller must be also ON !!!
-  speed = 80; // speed set     --> speed must be set when using position controller
+  speed = 50; // speed set     --> speed must be set when using position controller
   DesireSpeed_Write(speed);
 
   //control on/off
@@ -1647,9 +1664,12 @@ int main(int argc, char **argv)
       printf("...finish...\n");
       SteeringServoControl_Write(1520);
 
-      usleep(1500000);
+      usleep(2000000);
       speed = 0;
       DesireSpeed_Write(speed);
+      Alarm_Write(ON);
+      usleep(1000000);
+      Alarm_Write(OFF);
       break;
     }
 

@@ -21,7 +21,7 @@ const Scalar COLOR_RED = Scalar(0, 0, 255);
 const Scalar COLOR_GREEN = Scalar(170, 170, 0);
 
 
-const Vec3b RGB_WHITE_LOWER = Vec3b(100, 100, 190);
+const Vec3b RGB_WHITE_LOWER = Vec3b(190, 190, 190);
 const Vec3b RGB_WHITE_UPPER = Vec3b(255, 255, 255);
 
 const Vec3b HSV_YELLOW_LOWER = Vec3b(20, 40, 130);
@@ -41,8 +41,8 @@ const Vec3b HSV_GREEN_UPPER = Vec3b(110, 255, 255);
 const Vec3b HSV_BLACK_LOWER = Vec3b(0, 0, 0);
 const Vec3b HSV_BLACK_UPPER = Vec3b(180, 255, 50);
 
-const Vec3b YUV_LOWER = Vec3b(10, 110, 120);
-const Vec3b YUV_UPPER = Vec3b(70, 130, 140);
+const Vec3b YUV_LOWER = Vec3b(0, 110, 120);
+const Vec3b YUV_UPPER = Vec3b(30, 130, 140);
 
 const int Unexpected_Obstacle_Threshold = 5000;
 const int stop_line_threshold = 300;
@@ -54,6 +54,7 @@ bool hough_left(Mat& img, Mat& srcRGB, Point* p1, Point* p2);
 bool hough_right(Mat& img, Mat& srcRGB, Point* p1, Point* p2);
 bool hough_curve(Mat& img, Mat& srcRGB, Point* p1, Point* p2);
 int curve_detector(Mat& leftImg, Mat& rightImg, int number);
+bool hough_horizon(Mat& img, Mat& srcRGB, Point* p1, Point* p2);
 float data_transform(float x, float in_min, float in_max, float out_min, float out_max);
 void get_center_point(Mat& binaryImg, Point * p);
 
@@ -112,14 +113,13 @@ int line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, 
   Mat cannyImg1, cannyImg2;
 
   if(modeNum == 6){
-    leftROI = srcRGB(Rect(0, srcRGB.rows/3, srcRGB.cols/2, srcRGB.rows/3 * 2));
-    rightROI = srcRGB(Rect(srcRGB.cols/2, srcRGB.rows/3, srcRGB.cols/2, srcRGB.rows/3 * 2));
+    leftROI = srcRGB(Rect(0, srcRGB.rows/2, srcRGB.cols/2, srcRGB.rows/2));
+    rightROI = srcRGB(Rect(srcRGB.cols/2, srcRGB.rows/2, srcRGB.cols/2, srcRGB.rows/2));
   }
   else{
     leftROI = srcRGB(Rect(0, srcRGB.rows/3 * 2, srcRGB.cols/2, srcRGB.rows/3));
     rightROI = srcRGB(Rect(srcRGB.cols/2, srcRGB.rows/3 * 2, srcRGB.cols/2, srcRGB.rows/3));
   }
-
 
   cvtColor(leftROI, hsvImg1, CV_BGR2HSV);
   cvtColor(rightROI, hsvImg2, CV_BGR2HSV);
@@ -138,7 +138,7 @@ int line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, 
     cvtColor(oriImg, oriImg, CV_GRAY2BGR);
     resize(oriImg, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
   }
-  else if(modeNum == 3 || modeNum == 4 || modeNum == 5){
+  else if(modeNum == 3 || modeNum == 4 || modeNum == 5 || modeNum == 6){
     inRange(leftROI, RGB_WHITE_LOWER, RGB_WHITE_UPPER, binaryImg3);
     inRange(rightROI, RGB_WHITE_LOWER, RGB_WHITE_UPPER, binaryImg4);
 
@@ -159,6 +159,7 @@ int line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, 
   right_error = hough_right(cannyImg2, rightROI, &p3, &p4);
 
   if(left_error || right_error){
+
     angle = curve_detector(leftROI, rightROI, modeNum);
 
   }
@@ -224,34 +225,80 @@ int stop_line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* out
 }
 
 
-int is_yellow_horizental(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh){
+bool is_yellow_horizental(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh, int modeNum){
 
 
   Mat srcRGB(ih, iw, CV_8UC3, srcBuf); //input
   Mat dstRGB(nh, nw, CV_8UC3, outBuf); //ouput
   Mat resRGB(ih, iw, CV_8UC3);         //result
 
-  Mat roiImg, hsvImg, binaryImg;
+  Mat roiImg, hsvImg, binaryImg, cannyImg;
+  Point p1, p2;
+
+  bool error = false;
+  float slope;
 
   int cnt = 0;
 
-  roiImg = srcRGB(Rect(srcRGB.cols/3, srcRGB.rows/3, srcRGB.cols/3, srcRGB.rows/3));
-
-  cvtColor(roiImg, hsvImg, CV_BGR2HSV);
-  inRange(hsvImg, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, binaryImg);
 
 
-  cvtColor(binaryImg, binaryImg, CV_GRAY2BGR);
-  resize(binaryImg, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
+  slope = get_slope(p1, p2);
 
-  for(int i = 0; i < binaryImg.cols; i++){
-    for(int j = 0; j < binaryImg.rows; j++){
-      if(binaryImg.at<uchar>(j, i) == 255) cnt ++;
-    }
+  switch (modeNum) {
+    case 1 :
+
+    roiImg = srcRGB(Rect(srcRGB.cols/3 * 1, srcRGB.rows/3 *2, srcRGB.cols/ 3, srcRGB.rows/3));
+
+
+    cvtColor(roiImg, hsvImg, CV_BGR2HSV);
+    inRange(hsvImg, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, binaryImg);
+
+    Canny(binaryImg, cannyImg, 150, 250);
+
+    error = hough_horizon(cannyImg, roiImg, &p1, &p2);
+
+
+    cvtColor(binaryImg, binaryImg, CV_GRAY2BGR);
+    // resize(binaryImg, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
+
+    slope = get_slope(p1, p2);
+
+      if(!error && slope != 0.0 && 0.05 > slope && slope > -0.05){
+        return true;
+      }
+      else
+        return false;
+        break;
+    case 2:
+
+    roiImg = srcRGB(Rect(srcRGB.cols/3, srcRGB.rows/5 * 3, srcRGB.cols/ 3, srcRGB.rows /5  * 2));
+
+
+    cvtColor(roiImg, hsvImg, CV_BGR2HSV);
+    inRange(hsvImg, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, binaryImg);
+
+    Canny(binaryImg, cannyImg, 150, 250);
+
+    error = hough_horizon(cannyImg, roiImg, &p1, &p2);
+
+
+    cvtColor(binaryImg, binaryImg, CV_GRAY2BGR);
+    resize(binaryImg, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
+
+    slope = get_slope(p1, p2);
+
+      if(!error){
+        return true;
+      }
+      else
+        return false;
+      break;
+
+
   }
 
 
-  return cnt;
+
 }
 
 int enter_the_rotary(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh){
@@ -284,49 +331,220 @@ int enter_the_rotary(unsigned char* srcBuf, int iw, int ih, unsigned char* outBu
 
 }
 
-int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh){
+// int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh){
+//
+//   Mat srcRGB(ih, iw, CV_8UC3, srcBuf); //input
+//   Mat dstRGB(nh, nw, CV_8UC3, outBuf); //output
+//   Mat resRGB(ih, iw, CV_8UC3); //result
+//
+//   Mat roiImg;
+//   Mat yuvImg;
+//   Mat binaryImg;
+//
+//   int cnt = 0;
+//   bool flag;
+//
+//   roiImg = srcRGB(Rect(0, srcRGB.rows/3, srcRGB.cols, srcRGB.rows / 3 * 2));
+//
+//   cvtColor(roiImg, yuvImg, CV_BGR2YUV);
+//
+//   inRange(yuvImg, YUV_LOWER, YUV_UPPER, binaryImg);
+//
+//   int count[2] = { 0,  0};
+//
+//   for(int i = 0 ; i < binaryImg.rows ; i++){
+//     for(int j = 0; j < binaryImg.cols / 3 ; j++){
+//       if(binaryImg.at<uchar>(i, j) == 255) count[0]++;
+//     }
+//     for(int j = binaryImg.cols /3 * 2 ; j < binaryImg.cols; j++){
+//       if(binaryImg.at<uchar>(i, j) == 255) count[1]++;
+//     }
+//   }
+//
+//
+//
+//   cvtColor(binaryImg, binaryImg, CV_GRAY2BGR);
+//   resize(binaryImg, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
+//
+//
+//   if(count[0] > count[1]){
+//     return 2;
+//   }
+//   else{
+//     return 3;
+//   }
+// }
+
+int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh, int temp[], float temp2[]){
 
   Mat srcRGB(ih, iw, CV_8UC3, srcBuf); //input
   Mat dstRGB(nh, nw, CV_8UC3, outBuf); //output
   Mat resRGB(ih, iw, CV_8UC3); //result
 
+  Mat oriImg;
   Mat roiImg;
   Mat yuvImg;
   Mat binaryImg;
 
+  Point p1, p2, p3, p4;
+  Point i_p1, i_p2, i_p3, i_p4;
+
+  bool left_error = true;
+  bool right_error = true;
+
+  Mat leftROI, rightROI;
+  Mat hsvImg1, hsvImg2;
+  Mat binaryImg1, binaryImg2, binaryImg3, binaryImg4;
+  Mat cannyImg1, cannyImg2;
+
+  leftROI = srcRGB(Rect(0, srcRGB.rows/3, srcRGB.cols/2, srcRGB.rows/3 * 2));
+  rightROI = srcRGB(Rect(srcRGB.cols/2, srcRGB.rows/ 3, srcRGB.cols/2, srcRGB.rows/3 * 2));
+
+  cvtColor(leftROI, hsvImg1, CV_BGR2HSV);
+  cvtColor(rightROI, hsvImg2, CV_BGR2HSV);
+
+
+  inRange(leftROI, RGB_WHITE_LOWER, RGB_WHITE_UPPER, binaryImg1);
+  inRange(rightROI, RGB_WHITE_LOWER, RGB_WHITE_UPPER, binaryImg2);
+  // inRange(hsvImg1, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, binaryImg3);
+  // inRange(hsvImg2, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, binaryImg4);
+
+  // binaryImg1 = binaryImg1 ^ binaryImg3;
+  // binaryImg2 = binaryImg2 ^ binaryImg4;
+
+  Canny(binaryImg1, cannyImg1, 150, 250);
+  Canny(binaryImg2, cannyImg2, 150, 250);
+
+  // hconcat(binaryImg1, binaryImg2, tempImg);
+  // hconcat(cannyImg1, cannyImg2, tempImg);
+
+  left_error = hough_left(cannyImg1, leftROI, &p1, &p2);
+  right_error = hough_right(cannyImg2, rightROI, &p3, &p4);
+
+  if(left_error && right_error) return 1;
+
+  // i_flag = true;
+
+  // i_flag = i_flag && get_intersectpoint(p1, p2, Point(0, 0), Point(oriImg.cols, 0), &i_p1)
+  //                 && get_intersectpoint(p1, p2, Point(0, oriImg.rows), Point(oriImg.cols, oriImg.rows), &i_p2)
+  //                 && get_intersectpoint(Point(p3.x + 160, p3.y), Point(p4.x + 160, p4.y), Point(0, 0), Point(oriImg.cols, 0), &i_p3)
+  //                 && get_intersectpoint(Point(p3.x + 160, p3.y), Point(p4.x + 160, p4.y), Point(0, oriImg.rows), Point(oriImg.cols, oriImg.rows), &i_p4);
+
+  temp[0]  = p1.x;
+  temp[1]  = p1.y;
+  temp[2]  = p2.x;
+  temp[3]  = p2.y;
+  temp[4]  = p3.x;
+  temp[5]  = p3.y;
+  temp[6]  = p4.x;
+  temp[7]  = p4.y;
+
+
+
   int cnt = 0;
   bool flag;
 
+
+  // temp = find_points(srcRGB);
+
+  // inRange(srcRGB, RGB_WHITE_LOWER, RGB_WHITE_UPPER, tempImg);
+
+
+  // if(i_flag == false) return 1;
+  // oriImg = top_view_transform(srcRGB, temp);
+
   roiImg = srcRGB(Rect(0, srcRGB.rows/3, srcRGB.cols, srcRGB.rows / 3 * 2));
+
 
   cvtColor(roiImg, yuvImg, CV_BGR2YUV);
 
   inRange(yuvImg, YUV_LOWER, YUV_UPPER, binaryImg);
 
+  p3 = Point(p3.x + 160, p3.y);
+  p4 = Point(p4.x + 160, p4.y);
+
+  cvtColor(binaryImg, resRGB, CV_GRAY2BGR);
+  line(resRGB, p1, p2, COLOR_RED, 4, CV_AA);
+  line(resRGB, p3, p4, COLOR_RED, 4, CV_AA);
+  resize(resRGB, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
+
+
   int count[2] = { 0,  0};
 
-  for(int i = 0 ; i < binaryImg.rows ; i++){
-    for(int j = 0; j < binaryImg.cols / 3 ; j++){
-      if(binaryImg.at<uchar>(i, j) == 255) count[0]++;
+
+  // if(!left_error && !right_error)
+  // {
+  //   float a1 = (float)(p2.y - p1.y)/(float)(p2.x - p1.x);
+  //   float b1 = (float)(p1.y - a1 * (float)p1.x);
+  //   float a2 = (float)(p4.y - p3.y)/(float)(p4.x - p3.x);
+  //   float b2 = (float)(p3.y - a2 * (float)p3.x);
+  //
+  //   for(int i = 0 ; i < binaryImg.rows ; i++)
+  //   {
+  //     for(int j = 0; j < binaryImg.cols ; j++)
+  //     {
+  //       if(binaryImg.at<uchar>(i, j) == 255)
+  //       {
+  //         if(a1*j + b1 > i) count[0]++;
+  //         if(a2*j + b2 > i) count[1]++;
+  //       }
+  //     }
+  //   }
+  //   temp2[0] = a1;
+  //   temp2[1] = b1;
+  //
+  //   temp[10] = count[0];
+  //   temp[11] = count[1];
+  //
+  //   return count[0] > count[1] ? 2 : 3;
+  // }
+
+  if(!left_error)
+  {
+    float a = (float)(p2.y - p1.y)/(float)(p2.x - p1.x);
+    float b = (float)(p1.y - a * (float)p1.x);
+
+
+    for(int i = 0 ; i < binaryImg.rows ; i++)
+    {
+      for(int j = 0; j < binaryImg.cols ; j++)
+      {
+        if(binaryImg.at<uchar>(i, j) == 255 && a * j + b > (float)i) count[0]++;
+      }
     }
-    for(int j = binaryImg.cols /3 * 2 ; j < binaryImg.cols; j++){
-      if(binaryImg.at<uchar>(i, j) == 255) count[1]++;
+    temp2[0] = a;
+    temp2[1] = b;
+
+    temp[10] = count[0];
+    temp[11] = count[1];
+    if(count[0] < 300) return 3;
+    else return 2;
+    // return 1;
+  }
+  else if(!right_error)
+  {
+    float a = (float)(p4.y - p3.y)/(float)(p4.x - p3.x);
+    float b = (float)(p3.y - a * (float)p3.x);
+    for(int i = 0 ; i < binaryImg.rows ; i++)
+    {
+      for(int j = 0; j < binaryImg.cols ; j++)
+      {
+        if(binaryImg.at<uchar>(i, j) == 255 && a * j + b > (float)i) count[1]++;
+      }
     }
+    temp2[0] = a;
+    temp2[1] = b;
+    temp[10] = count[0];
+    temp[11] = count[1];
+    if(count[1] < 300) return 2;
+    else return 3;
+    // return 1;
   }
 
-
-
-  cvtColor(binaryImg, binaryImg, CV_GRAY2BGR);
-  resize(binaryImg, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
-
-
-  if(count[0] > count[1]){
-    return 2;
-  }
-  else{
-    return 3;
-  }
 }
+
+
+
 
 int traffic_light(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh, int centerP[]){
 
@@ -400,7 +618,7 @@ int traffic_light(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, 
     }
     else{
         rgdiff = {greenCenter.x - v[0].x, greenCenter.y - v[0].y};
-        float ratio = rgdiff.x / rydiff.x;
+        float ratio = (float) rgdiff.x / (float) rydiff.x;
         if(ratio > 2.5)
             return 2;
         else{
@@ -772,7 +990,7 @@ int curve_detector(Mat& leftImg, Mat& rightImg, int number){
       y = 30.0;
     break;
     case 6 :
-      y = 120.0;
+      y = 90.0;
     break;
   }
 
@@ -805,13 +1023,13 @@ int curve_detector(Mat& leftImg, Mat& rightImg, int number){
   Canny(binaryImg, cannyImg, 150, 250);
 
   switch(number){
-    case 1 : case 2 : case 5 :
+    case 1 : case 2 : case 5:
       error = hough_curve(cannyImg, roiImg, &p1, &p2);
       break;
     case 3 :
       error = hough_left(cannyImg, roiImg, &p1, &p2);
       break;
-    case 4 :
+    case 4 : case 6 :
       error = hough_right(cannyImg, roiImg, &p1, &p2);
       break;
   }
@@ -822,7 +1040,7 @@ int curve_detector(Mat& leftImg, Mat& rightImg, int number){
   if(error){
     return 1520;
   }
-  else if(slope < 0){ // right rotate
+  else if(slope < 0.0){ // right rotate
 
     steer =  data_transform(slope, -1.2, -0.2, 1.0, 500.0);
 
@@ -850,6 +1068,103 @@ int curve_detector(Mat& leftImg, Mat& rightImg, int number){
     return angle;
   }
 
+}
+
+bool hough_horizon(Mat& img, Mat& srcRGB, Point* p1, Point* p2) {
+
+	vector<Vec2f> lines;
+  vector<Vec2f> newLines;
+
+  Point point1;
+  Point point2;
+
+  int count = 0, x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+  int threshold = 40;
+
+  for (int i = 10; i > 0; i--){
+    HoughLines(img, lines, 1, CV_PI / 180, threshold);
+
+    for(size_t j = 0; j < lines.size(); j++){
+
+      Vec2f temp;
+
+      float rho = lines[j][0];
+      float theta = lines[j][1];
+
+      // if(CV_PI / 18 * 2 <= theta && theta <= CV_PI / 18 * 16) continue;
+
+      temp[0] = rho;
+      temp[1] = theta;
+
+      newLines.push_back(temp);
+
+    }
+
+
+    int clusterCount = 2;
+  		Mat h_points = Mat(newLines.size(), 1, CV_32FC2);
+  		Mat labels, centers;
+  		if (newLines.size() > 1) {
+  			for (size_t i = 0; i < newLines.size(); i++) {
+  				count++;
+  				float rho = newLines[i][0];
+  				float theta = newLines[i][1];
+
+
+  				double a = cos(theta), b = sin(theta);
+  				double x0 = a * rho, y0 = b * rho;
+  				h_points.at<Point2f>(i, 0) = Point2f(rho, (float)(theta * 100));
+  			}
+  			kmeans(h_points, clusterCount, labels,
+  				TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 10, 1.0),
+  				3, KMEANS_RANDOM_CENTERS, centers);
+
+  			Point mypt1 = centers.at<Point2f>(0, 0);
+
+  			float rho = mypt1.x;
+  			float theta = (float)mypt1.y / 100;
+  			double a = cos(theta), b = sin(theta);
+  			double x0 = a * rho, y0 = b * rho;
+
+  			int _x1 = int(x0 + 1000 * (-b));
+  			int _y1 = int(y0 + 1000 * (a));
+  			int _x2 = int(x0 - 1000 * (-b));
+  			int _y2 = int(y0 - 1000 * (a));
+
+  			x1 += _x1;
+  			y1 += _y1;
+
+  			x2 += _x2;
+  			y2 += _y2;
+
+  			Point mypt2 = centers.at<Point2f>(1, 0);
+
+  			rho = mypt2.x;
+  			theta = (float)mypt2.y / 100;
+  			a = cos(theta), b = sin(theta);
+  			x0 = a * rho, y0 = b * rho;
+
+  			_x1 = int(x0 + 1000 * (-b));
+  			_y1 = int(y0 + 1000 * (a));
+  			_x2 = int(x0 - 1000 * (-b));
+  			_y2 = int(y0 - 1000 * (a));
+
+  			x1 += _x1;
+  			y1 += _y1;
+
+  			x2 += _x2;
+  			y2 += _y2;
+
+  			break;
+  		};
+  	}
+  	if (count != 0) {
+  		p1->x = x1 / 2; p1->y = y1 / 2;
+  		p2->x = x2 / 2; p2->y = y2 / 2;
+
+  		return false;
+  	}
+  	return true;
 }
 
 float data_transform(float x, float in_min, float in_max, float out_min, float out_max){
