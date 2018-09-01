@@ -21,7 +21,7 @@ const Scalar COLOR_RED = Scalar(0, 0, 255);
 const Scalar COLOR_GREEN = Scalar(170, 170, 0);
 
 
-const Vec3b RGB_WHITE_LOWER = Vec3b(100, 100, 190);
+const Vec3b RGB_WHITE_LOWER = Vec3b(100, 100, 180);
 const Vec3b RGB_WHITE_UPPER = Vec3b(255, 255, 255);
 
 const Vec3b HSV_YELLOW_LOWER = Vec3b(20, 40, 130);
@@ -106,20 +106,13 @@ int line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, 
   Mat resRGB(ih, iw, CV_8UC3); //reuslt
 
   Mat oriImg;
-  Mat leftROI, rightROI, roiImg;
+  Mat leftROI, rightROI;
   Mat hsvImg1, hsvImg2;
   Mat binaryImg1, binaryImg2, binaryImg3, binaryImg4;
   Mat cannyImg1, cannyImg2;
 
-  if(modeNum == 6){
-    leftROI = srcRGB(Rect(0, srcRGB.rows/3, srcRGB.cols/2, srcRGB.rows/3 * 2));
-    rightROI = srcRGB(Rect(srcRGB.cols/2, srcRGB.rows/3, srcRGB.cols/2, srcRGB.rows/3 * 2));
-  }
-  else{
-    leftROI = srcRGB(Rect(0, srcRGB.rows/3 * 2, srcRGB.cols/2, srcRGB.rows/3));
-    rightROI = srcRGB(Rect(srcRGB.cols/2, srcRGB.rows/3 * 2, srcRGB.cols/2, srcRGB.rows/3));
-  }
-
+  leftROI = srcRGB(Rect(0, srcRGB.rows/3 * 2, srcRGB.cols/2, srcRGB.rows/3));
+  rightROI = srcRGB(Rect(srcRGB.cols/2, srcRGB.rows/3 * 2, srcRGB.cols/2, srcRGB.rows/3));
 
   cvtColor(leftROI, hsvImg1, CV_BGR2HSV);
   cvtColor(rightROI, hsvImg2, CV_BGR2HSV);
@@ -132,13 +125,7 @@ int line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, 
     cvtColor(resRGB, resRGB, CV_GRAY2BGR);
     resize(resRGB, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
   }
-  else if(modeNum == 2){
-    hconcat(binaryImg1, binaryImg2, resRGB);
-    oriImg = resRGB(Rect(0, resRGB.rows/3, resRGB.cols, resRGB.rows/3 * 2));
-    cvtColor(oriImg, oriImg, CV_GRAY2BGR);
-    resize(oriImg, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
-  }
-  else if(modeNum == 3 || modeNum == 4 || modeNum == 5){
+  else if(modeNum == 2 || modeNum == 3 || modeNum == 4){
     inRange(leftROI, RGB_WHITE_LOWER, RGB_WHITE_UPPER, binaryImg3);
     inRange(rightROI, RGB_WHITE_LOWER, RGB_WHITE_UPPER, binaryImg4);
 
@@ -306,10 +293,10 @@ int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* out
   int count[2] = { 0,  0};
 
   for(int i = 0 ; i < binaryImg.rows ; i++){
-    for(int j = 0; j < binaryImg.cols / 3 ; j++){
+    for(int j = 0; j < binaryImg.cols / 2 ; j++){
       if(binaryImg.at<uchar>(i, j) == 255) count[0]++;
     }
-    for(int j = binaryImg.cols /3 * 2 ; j < binaryImg.cols; j++){
+    for(int j = binaryImg.cols /2 ; j < binaryImg.cols; j++){
       if(binaryImg.at<uchar>(i, j) == 255) count[1]++;
     }
   }
@@ -328,7 +315,7 @@ int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* out
   }
 }
 
-int traffic_light(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh, int centerP[]){
+float traffic_light(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh, int centerP[]){
 
 
   Mat srcRGB(ih, iw, CV_8UC3, srcBuf); //input
@@ -377,13 +364,13 @@ int traffic_light(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, 
 
     if(check[0] && check[1]){
         if(greenCenter.x == 0 || greenCenter.y == 0)
-            return -4;
+            return -4.;
         rydiff = {v[1].x - v[0].x, v[1].y - v[0].y};
     }
 
     if(!check[0]){
         if(redCenter.x == 0 || redCenter.y == 0)
-            return -2;
+            return -2.;
 
         v[0].x = redCenter.x;
         v[0].y = redCenter.y;
@@ -391,7 +378,7 @@ int traffic_light(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, 
     }
     else if(!check[1]){
         if(yellowCenter.x == 0 || yellowCenter.y == 0)
-            return -3;
+            return -3.;
 
         v[1].x = yellowCenter.x;
         v[1].y = yellowCenter.y;
@@ -401,14 +388,22 @@ int traffic_light(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, 
     else{
         rgdiff = {greenCenter.x - v[0].x, greenCenter.y - v[0].y};
         float ratio = rgdiff.x / rydiff.x;
-        if(ratio > 2.5)
-            return 2;
-        else{
-          return 1;
+        float mid = v[1].x + rydiff.x / 2 - greenBinaryImg.rows / 2;
 
-        }
+        float ret;
+        if(ratio > 2.5)
+            ret =  2.;
+        else
+            ret = 1.;
+
+        if(mid < 0)
+          ret += 0.1;
+        else
+          ret += 0.2;
+        float P = 1.;//1초
+        return ret + 0.01 * (P * fabs(mid) / (greenBinaryImg.rows / 2)); 
     }
-    return -1;
+    return -1.;
   }
 
 
@@ -765,39 +760,30 @@ int curve_detector(Mat& leftImg, Mat& rightImg, int number){
   int angle;
 
   switch(number){
-    case 1 : case 3 : case 4 : case 5 :
+    case 1 : case 3 : case 4 :
       y = 60.0;
     break;
     case 2 :
       y = 30.0;
     break;
-    case 6 :
-      y = 120.0;
-    break;
+
   }
 
   Mat oriImg, roiImg, hsvImg, binaryImg, binaryImg1, cannyImg;
   Point p1, p2;
 
   hconcat(leftImg, rightImg, oriImg);
-
+  roiImg = oriImg(Rect(0, oriImg.rows/2, oriImg.cols, oriImg.rows/2));
+  cvtColor(oriImg, hsvImg, CV_BGR2HSV);
 
   switch(number){
     case 1 :
-      cvtColor(oriImg, hsvImg, CV_BGR2HSV);
       inRange(hsvImg, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, binaryImg);
       break;
-    case 2 :
-      roiImg = oriImg(Rect(0, oriImg.rows/2, oriImg.cols, oriImg.rows/2));
-      cvtColor(roiImg, hsvImg, CV_BGR2HSV);
-      inRange(hsvImg, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, binaryImg);
-      inRange(roiImg, RGB_WHITE_LOWER, RGB_WHITE_UPPER, binaryImg1);
-      binaryImg = binaryImg | binaryImg1;
-      break;
-    case 3 : case 4 : case 5 : case 6 :
-      cvtColor(oriImg, hsvImg, CV_BGR2HSV);
+    case 2 : case 3 : case 4 :
       inRange(hsvImg, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, binaryImg);
       inRange(oriImg, RGB_WHITE_LOWER, RGB_WHITE_UPPER, binaryImg1);
+
       binaryImg = binaryImg | binaryImg1;
       break;
   }
@@ -805,7 +791,7 @@ int curve_detector(Mat& leftImg, Mat& rightImg, int number){
   Canny(binaryImg, cannyImg, 150, 250);
 
   switch(number){
-    case 1 : case 2 : case 5 :
+    case 1 : case 2 :
       error = hough_curve(cannyImg, roiImg, &p1, &p2);
       break;
     case 3 :
@@ -816,7 +802,6 @@ int curve_detector(Mat& leftImg, Mat& rightImg, int number){
       break;
   }
 
-
   slope = get_slope(p1, p2);
 
   if(error){
@@ -824,12 +809,12 @@ int curve_detector(Mat& leftImg, Mat& rightImg, int number){
   }
   else if(slope < 0){ // right rotate
 
-    steer =  data_transform(slope, -1.2, -0.2, 1.0, 500.0);
+    steer =  data_transform(slope, -1.2, -0.2, 1.0, 300.0);
 
     xLeft = (y - p1.y + slope * p1.x) / slope;
 
 
-    skewness = data_transform(xLeft, -120.0, 220.0, 0.0, 2.0);
+    skewness = data_transform(xLeft, -120.0, 220.0, 0.0, 4.0);
 
     steer = 1520.0 - (steer * skewness);
     angle = steer;
@@ -838,11 +823,12 @@ int curve_detector(Mat& leftImg, Mat& rightImg, int number){
   }
   else{
 
-    steer =  data_transform(slope, 0.2, 1.2, -500.0, -1.0);
+    steer =  data_transform(slope, 0.2, 1.2, -300.0, -1.0);
 
     xRight = (y - p1.y + slope * p1.x) / slope;
 
-    skewness = data_transform(xRight, 100, 440, -2.0, 0.0);
+
+    skewness = data_transform(xRight, 100, 440, -4.0, 0.0);
 
     steer = 1520.0 + (steer * skewness);
     angle = steer;

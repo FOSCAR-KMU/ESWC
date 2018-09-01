@@ -47,10 +47,10 @@
 
 ////////////////////////////////////////////////////////////////////////////////////
 
+volatile int mode = 5;
+
 volatile bool cameraOnOff = 0;
 volatile bool driveOnOff = 0;
-
-volatile int mode = 5;
 
 //////////////// 변수 /////////////////
 unsigned char status;
@@ -110,9 +110,9 @@ volatile passing_lane_flag = 0; //7
 // 2 : 왼쪽에 차 있음(우조향)
 // 3 : 오른쪽에 차 있음(좌조향)
 // 4 : 차선 복귀(우 - > 좌)
-// 5 : 차선 복귀 중(좌 - > 우
-
+// 5 : 차선 복귀 중(좌 - > 우)
 // 6, 7 : 정지선 인식
+
 volatile int traffic_light_flag = 0; // 8
 // 0 : 신호등 인식 전
 // 1 : 좌회전
@@ -264,11 +264,6 @@ struct thr_data {
     pthread_t threads[3];
 };
 
-/**
-  * @brief  Alloc vpe input buffer and a new buffer object
-  * @param  data: pointer to parameter of thr_data
-  * @retval none
-  */
 static int allocate_input_buffers(struct thr_data *data)
 {
     int i;
@@ -289,13 +284,6 @@ static int allocate_input_buffers(struct thr_data *data)
     return 0;
 }
 
-/**
-  * @brief  Free vpe input buffer and destroy a buffer object
-  * @param  buffer: pointer to parameter of buffer object
-                  n : count of buffer object
-                  bmultiplanar : multipanar value of buffer object
-  * @retval none
-  */
 static void free_input_buffers(struct buffer **buffer, uint32_t n, bool bmultiplanar)
 {
     uint32_t i;
@@ -379,7 +367,7 @@ static void drive(struct display *disp, struct buffer *cambuf)
           }
         }
         else if(mode == 7 && passing_lane_flag == 4 || passing_lane_flag == 5){
-          temp_angle = line_detector(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, slope, 2);
+          temp_angle = line_detector(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, slope, 5);
         }
         else if(mode == 7 && passing_lane_flag == 7){
           temp_angle = line_detector(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, slope, 4);
@@ -502,12 +490,6 @@ static void trafficLightMission(struct display *disp, struct buffer *cambuf)
 
 
 
-
-/**
-  * @brief  Camera capture, capture image covert by VPE and display after sobel edge
-  * @param  arg: pointer to parameter of thr_data
-  * @retval none
-  */
 void * capture_thread(void *arg)
 {
     struct thr_data *data = (struct thr_data *)arg;
@@ -752,11 +734,7 @@ void * input_thread(void *arg)
 
 static struct thr_data* pexam_data = NULL;
 
-/**
-  * @brief  handling an SIGINT(CTRL+C) signal
-  * @param  sig: signal type
-  * @retval none
-  */
+
 void signal_handler(int sig)
 {
     if(sig == SIGINT) {
@@ -1418,7 +1396,7 @@ void left_rotate(){
 
   dist = get_distance(1);
 
-  if(dist < 80){
+  if(dist < 50){
 
     SteeringServoControl_Write(2000);
 
@@ -1438,12 +1416,12 @@ void left_rotate(){
 void right_rotate(){
   dist = get_distance(1);
 
-  if(dist < 80){
+  if(dist < 50){
 
     SteeringServoControl_Write(1000);
 
     while(1){
-      dist = get_distance(3);
+      dist = get_distance(5);
       if(dist < 50) break;
     }
 

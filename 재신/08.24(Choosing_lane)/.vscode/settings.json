@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "deque": "cpp",
+        "vector": "cpp",
+        "functional": "cpp",
+        "car_lib.h": "c"
+    }
+}
