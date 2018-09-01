@@ -1581,7 +1581,7 @@ int main(int argc, char **argv)
   CameraYServoControl_Write(cameraY);
 
   SpeedControlOnOff_Write(CONTROL);   // speed controller must be also ON !!!
-  speed = 50; // speed set     --> speed must be set when using position controller
+  speed = 0; // speed set     --> speed must be set when using position controller
   DesireSpeed_Write(speed);
 
   //control on/off

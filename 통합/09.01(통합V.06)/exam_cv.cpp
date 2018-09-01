@@ -331,49 +331,6 @@ int enter_the_rotary(unsigned char* srcBuf, int iw, int ih, unsigned char* outBu
 
 }
 
-// int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh){
-//
-//   Mat srcRGB(ih, iw, CV_8UC3, srcBuf); //input
-//   Mat dstRGB(nh, nw, CV_8UC3, outBuf); //output
-//   Mat resRGB(ih, iw, CV_8UC3); //result
-//
-//   Mat roiImg;
-//   Mat yuvImg;
-//   Mat binaryImg;
-//
-//   int cnt = 0;
-//   bool flag;
-//
-//   roiImg = srcRGB(Rect(0, srcRGB.rows/3, srcRGB.cols, srcRGB.rows / 3 * 2));
-//
-//   cvtColor(roiImg, yuvImg, CV_BGR2YUV);
-//
-//   inRange(yuvImg, YUV_LOWER, YUV_UPPER, binaryImg);
-//
-//   int count[2] = { 0,  0};
-//
-//   for(int i = 0 ; i < binaryImg.rows ; i++){
-//     for(int j = 0; j < binaryImg.cols / 3 ; j++){
-//       if(binaryImg.at<uchar>(i, j) == 255) count[0]++;
-//     }
-//     for(int j = binaryImg.cols /3 * 2 ; j < binaryImg.cols; j++){
-//       if(binaryImg.at<uchar>(i, j) == 255) count[1]++;
-//     }
-//   }
-//
-//
-//
-//   cvtColor(binaryImg, binaryImg, CV_GRAY2BGR);
-//   resize(binaryImg, dstRGB, Size(nw, nh), 0, 0, CV_INTER_LINEAR);
-//
-//
-//   if(count[0] > count[1]){
-//     return 2;
-//   }
-//   else{
-//     return 3;
-//   }
-// }
 
 int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh, int temp[], float temp2[]){
 
@@ -406,29 +363,15 @@ int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* out
 
   inRange(leftROI, RGB_WHITE_LOWER, RGB_WHITE_UPPER, binaryImg1);
   inRange(rightROI, RGB_WHITE_LOWER, RGB_WHITE_UPPER, binaryImg2);
-  // inRange(hsvImg1, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, binaryImg3);
-  // inRange(hsvImg2, HSV_YELLOW_LOWER, HSV_YELLOW_UPPER, binaryImg4);
-
-  // binaryImg1 = binaryImg1 ^ binaryImg3;
-  // binaryImg2 = binaryImg2 ^ binaryImg4;
 
   Canny(binaryImg1, cannyImg1, 150, 250);
   Canny(binaryImg2, cannyImg2, 150, 250);
-
-  // hconcat(binaryImg1, binaryImg2, tempImg);
-  // hconcat(cannyImg1, cannyImg2, tempImg);
 
   left_error = hough_left(cannyImg1, leftROI, &p1, &p2);
   right_error = hough_right(cannyImg2, rightROI, &p3, &p4);
 
   if(left_error && right_error) return 1;
 
-  // i_flag = true;
-
-  // i_flag = i_flag && get_intersectpoint(p1, p2, Point(0, 0), Point(oriImg.cols, 0), &i_p1)
-  //                 && get_intersectpoint(p1, p2, Point(0, oriImg.rows), Point(oriImg.cols, oriImg.rows), &i_p2)
-  //                 && get_intersectpoint(Point(p3.x + 160, p3.y), Point(p4.x + 160, p4.y), Point(0, 0), Point(oriImg.cols, 0), &i_p3)
-  //                 && get_intersectpoint(Point(p3.x + 160, p3.y), Point(p4.x + 160, p4.y), Point(0, oriImg.rows), Point(oriImg.cols, oriImg.rows), &i_p4);
 
   temp[0]  = p1.x;
   temp[1]  = p1.y;
@@ -444,14 +387,6 @@ int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* out
   int cnt = 0;
   bool flag;
 
-
-  // temp = find_points(srcRGB);
-
-  // inRange(srcRGB, RGB_WHITE_LOWER, RGB_WHITE_UPPER, tempImg);
-
-
-  // if(i_flag == false) return 1;
-  // oriImg = top_view_transform(srcRGB, temp);
 
   roiImg = srcRGB(Rect(0, srcRGB.rows/3, srcRGB.cols, srcRGB.rows / 3 * 2));
 
@@ -471,33 +406,6 @@ int passing_lane_check(unsigned char* srcBuf, int iw, int ih, unsigned char* out
 
   int count[2] = { 0,  0};
 
-
-  // if(!left_error && !right_error)
-  // {
-  //   float a1 = (float)(p2.y - p1.y)/(float)(p2.x - p1.x);
-  //   float b1 = (float)(p1.y - a1 * (float)p1.x);
-  //   float a2 = (float)(p4.y - p3.y)/(float)(p4.x - p3.x);
-  //   float b2 = (float)(p3.y - a2 * (float)p3.x);
-  //
-  //   for(int i = 0 ; i < binaryImg.rows ; i++)
-  //   {
-  //     for(int j = 0; j < binaryImg.cols ; j++)
-  //     {
-  //       if(binaryImg.at<uchar>(i, j) == 255)
-  //       {
-  //         if(a1*j + b1 > i) count[0]++;
-  //         if(a2*j + b2 > i) count[1]++;
-  //       }
-  //     }
-  //   }
-  //   temp2[0] = a1;
-  //   temp2[1] = b1;
-  //
-  //   temp[10] = count[0];
-  //   temp[11] = count[1];
-  //
-  //   return count[0] > count[1] ? 2 : 3;
-  // }
 
   if(!left_error)
   {
