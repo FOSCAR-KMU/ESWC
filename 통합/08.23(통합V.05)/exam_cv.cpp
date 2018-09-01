@@ -120,6 +120,7 @@ int line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, 
     rightROI = srcRGB(Rect(srcRGB.cols/2, srcRGB.rows/3 * 2, srcRGB.cols/2, srcRGB.rows/3));
   }
 
+
   cvtColor(leftROI, hsvImg1, CV_BGR2HSV);
   cvtColor(rightROI, hsvImg2, CV_BGR2HSV);
 
@@ -158,7 +159,6 @@ int line_detector(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, 
   right_error = hough_right(cannyImg2, rightROI, &p3, &p4);
 
   if(left_error || right_error){
-
     angle = curve_detector(leftROI, rightROI, modeNum);
 
   }
@@ -805,7 +805,7 @@ int curve_detector(Mat& leftImg, Mat& rightImg, int number){
   Canny(binaryImg, cannyImg, 150, 250);
 
   switch(number){
-    case 1 : case 2 : case 5 : case 6 :
+    case 1 : case 2 : case 5 :
       error = hough_curve(cannyImg, roiImg, &p1, &p2);
       break;
     case 3 :
