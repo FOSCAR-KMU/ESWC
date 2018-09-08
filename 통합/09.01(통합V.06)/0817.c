@@ -915,7 +915,7 @@ void mode_outbreak()
 
 /************************* 4. 주차 *************************************/
 
-bool is_parking_area()          // 주차공간 판단 (1 : 가까운 벽, 0 : 먼 벽)
+bool is_parking_area_right()          // 주차공간 판단 (1 : 가까운 벽, 0 : 먼 벽)
 {
   dist = get_distance(3);
   if(dist < 30) return 1;       // 가까운 벽 인식
@@ -925,7 +925,19 @@ bool is_parking_area()          // 주차공간 판단 (1 : 가까운 벽, 0 : �
   }
 }
 
-void go_backward()            // 주차 공간인지 판단 후 후진
+bool is_parking_area_left()          // 주차공간 판단 (1 : 가까운 벽, 0 : 먼 벽)
+{
+  dist = get_distance(5);
+  if(dist < 30) return 1;       // 가까운 벽 인식
+  else if(dist > 50){
+    return 0;  // 먼 벽 인식
+
+  }
+}
+
+
+
+void go_backward_right()            // 주차 공간인지 판단 후 후진
 {
 
   SteeringServoControl_Write(1000);
@@ -943,7 +955,25 @@ void go_backward()            // 주차 공간인지 판단 후 후진
   }
 }
 
-bool parking_start()        // 주차 모드 판단 (수평 or 수직) -> 왼쪽 공간 이용 (0 : 수평 , 1 : 수직)
+void go_backward_left()            // 주차 공간인지 판단 후 후진
+{
+
+  SteeringServoControl_Write(2000);
+  DesireSpeed_Write(-100);
+
+  while(1) {
+    dist = get_distance(3);
+
+    if(dist < 40){  //주차공간을 찾아서 오른쪽 조향으로 들어감
+      DesireSpeed_Write(0);
+      usleep(1000000);
+      parking_flag = 4;         // 후진 완료
+      break;
+    }
+  }
+}
+
+bool parking_start_right()        // 주차 모드 판단 (수평 or 수직) -> 왼쪽 공간 이용 (0 : 수평 , 1 : 수직)
 {
   dist = get_distance(5);
   printf("%d CM\n" , dist);
@@ -958,8 +988,22 @@ bool parking_start()        // 주차 모드 판단 (수평 or 수직) -> 왼쪽
   return 1;                  // 아니면 수직 주차 시작
 }
 
+bool parking_start_left()        // 주차 모드 판단 (수평 or 수직) -> 왼쪽 공간 이용 (0 : 수평 , 1 : 수직)
+{
+  dist = get_distance(3);
+  printf("%d CM\n" , dist);
 
-void horizontal_parking()       // 수평 주차 모드
+  if(dist > 20){             // 공간이 20보다 크면 수평 주차 시작
+      // horizontal_flag = 1;
+      // vertical_flag = 0;
+    printf("수평주차\n");
+    return 0;
+  }
+  printf("수직주차\n");
+  return 1;                  // 아니면 수직 주차 시작
+}
+
+void horizontal_parking_right()       // 수평 주차 모드
 {
   printf("수평 주차 모드 run!!\n");
 
@@ -1003,6 +1047,50 @@ void horizontal_parking()       // 수평 주차 모드
   Alarm_Write(OFF);
 }
 
+
+void horizontal_parking_left()       // 수평 주차 모드
+{
+  printf("수평 주차 모드 run!!\n");
+
+  dist = get_distance(5);
+  interval = data_transform(dist , 0 , 30 , 0 , 400);
+  angle = 1520 - interval;
+
+  /* 들어갈 공간 확보를 위해 살짝 앞으로 뺌*/
+
+  DesireSpeed_Write(120);
+  SteeringServoControl_Write(angle);
+
+  while(1){
+    dist = get_distance(3);
+    printf("주차 %d CM\n" , dist);
+
+    if(dist  > 100) {
+      DesireSpeed_Write(0);
+      break;
+    }
+  }
+
+  /*왼쪽으로 최대조향하고 주차완료될 떄까지 후진*/
+
+  SteeringServoControl_Write(1000);
+  DesireSpeed_Write(-100);
+
+  while(1){
+    dist = get_distance(4);
+
+    printf("뒤 %d CM\n" , dist);
+    if(dist < 10 ) {                 // 후방 거리가 10cm 이내이면 주차 완료
+      DesireSpeed_Write(0);
+      break;
+    }
+  }
+
+  //주차 완료 신호
+  Alarm_Write(ON);
+  usleep(1000000);
+  Alarm_Write(OFF);
+}
 void vertical_parking()       // 수직 주차 모드
 {
   printf("수직 주차 모드 run!!\n");
@@ -1029,7 +1117,7 @@ void vertical_parking()       // 수직 주차 모드
   Alarm_Write(OFF);
 }
 
-void return_lane_vertical()      // 수직 주차 완료 후 차선 복귀
+void return_lane_vertical_right()      // 수직 주차 완료 후 차선 복귀
 {
   angle = 1520;
   DesireSpeed_Write(80);
@@ -1056,7 +1144,33 @@ void return_lane_vertical()      // 수직 주차 완료 후 차선 복귀
   }
 }
 
-void return_lane_horizontal()   // 수평 주차 완료 후 차선 복귀
+void return_lane_vertical_left()      // 수직 주차 완료 후 차선 복귀
+{
+  angle = 1520;
+  DesireSpeed_Write(80);
+
+  while(1) {
+    SteeringServoControl_Write(angle);
+    dist = get_distance(4);
+
+    if(dist < 20){  //4번 센서랑 벽까지 거리가 20미만 이면 가운데 맞추면서 나옴
+      angle = 1520;
+      continue;
+    }
+
+    else if(dist > 150){
+      DesireSpeed_Write(0);
+      usleep(1000000);
+      break;
+    }
+
+    else if(dist > 30 ){ // 후방 거리가 30보다 커지면 오른쪽 최대조향
+      angle = 2000;
+      continue;
+    }
+  }
+}
+void return_lane_horizontal_right()   // 수평 주차 완료 후 차선 복귀
 {
   SteeringServoControl_Write(2000);
   usleep(500000);
@@ -1064,6 +1178,34 @@ void return_lane_horizontal()   // 수평 주차 완료 후 차선 복귀
 
   while(1){
     dist = get_distance(2);
+
+    if(dist > 40){     // 오른쪽 거리가 100 cm 이상이면 멈춤
+      break;
+    }
+  }
+
+  SteeringServoControl_Write(1000);
+  usleep(1000000);
+
+  while(1){
+    dist = get_distance(4);
+
+    if(dist > 200){       // 후방 거리가 150 이상이면 멈춤
+      DesireSpeed_Write(0);
+      usleep(1000000);
+      break;
+    }
+  }
+}
+
+void return_lane_horizontal_left()   // 수평 주차 완료 후 차선 복귀
+{
+  SteeringServoControl_Write(1000);
+  usleep(500000);
+  DesireSpeed_Write(80);
+
+  while(1){
+    dist = get_distance(6);
 
     if(dist > 40){     // 오른쪽 거리가 100 cm 이상이면 멈춤
       break;
@@ -1114,31 +1256,31 @@ void mode_parking(){
   if(parking_finish == 0) printf("parking_state_11111\n");
   else printf("parking_state_2222\n");
 
-  if(parking_flag == 0 && is_parking_area()) {
+  if(parking_flag == 0 && is_parking_area_right()) {
     printf("첫번째 장애물\n");
     parking_flag = 1;
     // start = clock();
   }
-  else if(parking_flag == 1 && !is_parking_area()) {
+  else if(parking_flag == 1 && !is_parking_area_right()) {
     printf("수직주차 구간\n");
     parking_flag = 2;
   }
-  else if(parking_flag == 2 && is_parking_area()) {
+  else if(parking_flag == 2 && is_parking_area_right()) {
     printf("두번째 장애물\n");
     parking_flag = 3;
 
   }
   else if(parking_flag == 3) {
-    go_backward();      // 후진 시작
+    go_backward_right();      // 후진 시작
   }
   else if(parking_flag == 4) {
-    if(!parking_start()) {      // 수평주차모드
-      horizontal_parking();     // 주차모드
-      return_lane_horizontal(); // 차선복귀모드
+    if(!parking_start_right()) {      // 수평주차모드
+      horizontal_parking_right();     // 주차모드
+      return_lane_horizontal_right(); // 차선복귀모드
     }
     else {                      // 수직주차모드
-      vertical_parking();       // 주차모드
-      return_lane_vertical();   // 차선복귀모드
+      vertical_parking_right();       // 주차모드
+      return_lane_vertical_right();   // 차선복귀모드
     }
 
     parking_flag = 5;
