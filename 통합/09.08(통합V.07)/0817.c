@@ -1264,23 +1264,26 @@ void tunnel_run()
   if(dist_left < 50 && dist_right > 50) { // 왼쪽만 인식할 때
     interval = dist_left;
     interval = data_transform(interval, 0, 20, -500, 500);
-    angle = 1520 + interval;
+    temp_angle = 1520 + interval;
   }
 
   else if(dist_left > 50 && dist_right < 50) { // 오른쪽만 인식할 때
     interval = dist_right;
     interval = data_transform(interval, 0, 20, -500, 500);
-    angle = 1520 - interval;
+    temp_angle = 1520 - interval;
   }
 
   else if(dist_left < 50 && dist_right < 50) {
     interval = dist_right - dist_left;
     interval = data_transform(interval, -20, 20, -500, 500);
-    angle = 1520 - interval;
+    temp_angle = 1520 - interval;
   }
 
-  printf("스티어링 값 : %d \n" , angle);
-  SteeringServoControl_Write(angle);
+  if(temp_angle != angle){
+    angle = temp_angle;
+    SteeringServoControl_Write(angle);
+  }
+
 }
 
 void mode_tunnel()
