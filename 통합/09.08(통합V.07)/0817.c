@@ -863,6 +863,8 @@ void mode_start()
 {
   printf("START\n");
   if(start_condition())
+    speed = 100; // speed set     --> speed must be set when using position controller
+    DesireSpeed_Write(speed);
     mode++; // 출발하면 고가도로 모드
 }
 
@@ -880,8 +882,7 @@ bool overpass_finish()
 
 void mode_overpass()
 {
-  speed = 100; // speed set     --> speed must be set when using position controller
-  DesireSpeed_Write(speed);
+
   printf("OVERPASS\n");
   if(overpass_finish()) overpass_flag = 1; // 고가도로 종료 조건
   if(overpass_flag == 0)      // 고가도로 시작 전 + 주행 중
