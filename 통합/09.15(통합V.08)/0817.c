@@ -47,7 +47,7 @@
 
 ////////////////////////////////////////////////////////////////////////////////////
 
-volatile int mode = 0;
+volatile int mode = 1;
 
 volatile bool cameraOnOff = 0;
 volatile bool driveOnOff = 0;
@@ -59,6 +59,7 @@ unsigned char gain;
 int position, posInit, posDes, posRead;
 short cameraY;
 int channel;
+
 int data;
 char sensor;
 int tol;
@@ -107,7 +108,7 @@ volatile int tunnel_flag = 0; // 6
 // 1 : 터널 주행 중
 // 2 : 터널 탈출 후
 
-volatile passing_lane_flag = 6; //7
+volatile passing_lane_flag = 0; //7
 // 0 : 가운데 차 인식 전
 // 1 : 가운데 차 인식 후 진행방향 결정
 // 2 : 왼쪽에 차 있음(우조향)
@@ -120,9 +121,8 @@ volatile int traffic_light_flag = 0; // 8
 // 0 : 신호등 인식 전
 // 1 : 좌회전
 // 2 : 우회전
-// 3 : 초록색 인식 했지만 1.5 ~ 2.5배 벗어남
-// 4 : 신호등 진입 끝
-// 5 : 정지선 인식
+// 3 : 신호등 진입 끝 정지선 인식
+// 4 : 정지선 인식
 // -1 : 판단전
 // -2 : 빨간색 판단 전
 // -3 : 노란색 판단 전
@@ -148,6 +148,8 @@ bool is_stop();
 int get_distance();
 
 int data_transform(int x, int in_min, int in_max, int out_min, int out_max);
+float data_transformF(float x, float in_min, float in_max, float out_min, float out_max);
+
 
 //////////////////////////// 출발 ////////////////////////////
 
@@ -163,7 +165,7 @@ void mode_overpass();
 
 volatile int outbreak_count = 0; //돌발 표지판 이진화 픽셀값 Count
 
-const int max_outbreak_thrshold = 8000;
+const int max_outbreak_thrshold = 4000;
 const int min_outbreak_thrshold = 500;
 
 void mode_outbreak();
@@ -173,11 +175,13 @@ void mode_outbreak();
 
 int distance_sensor[7];
 bool parking_finish = 0;
+int backward_right_flag = 0;
 
 volatile int curve_count = 0;
 
 bool is_parking_area();
-void go_backward();
+void go_backward_right();
+void go_backward_left();
 bool parking_start();
 void horizontal_parking();
 void vertical_parking();
@@ -367,6 +371,9 @@ static void drive(struct display *disp, struct buffer *cambuf)
         }
         else if(mode == 7 && passing_lane_flag == 0){
           temp_angle = line_detector(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, slope, 4);
+          if(temp_angle == 1520){
+            temp_angle = 1600;
+          }
         }
         else if(mode == 7 && passing_lane_flag == 4 || passing_lane_flag == 5){
           temp_angle = line_detector(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, slope, 5);
@@ -444,10 +451,10 @@ static void is_yellow_line(struct display *disp, struct buffer *cambuf)
 
 
         if(mode == 7){
-          is_return = is_yellow_horizental(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, 1);
+          is_return = is_yellow_horizental(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, 1, ab);
         }
         else{
-          check_yellow_line = is_yellow_horizental(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, 2);
+          check_yellow_line = is_yellow_horizental(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, 2, ab);
         }
 
 
@@ -592,14 +599,16 @@ void * capture_thread(void *arg)
             driveOnOff = 1;
             cameraOnOff = 1;
 
-            if(passing_lane_flag == 1){
+            if(passing_lane_flag == 0){
+              rotary_enter(vpe->disp, capt);
+            }
+            else if(passing_lane_flag == 1){
               driveOnOff = 0;
               passing_lane_decision(vpe->disp, capt);
             }
             else if(passing_lane_flag == 4 || passing_lane_flag == 5){
               is_yellow_line(vpe->disp, capt);
               driveOnOff = 1;
-
             }
           break;
           case 8 : // 신호등
@@ -607,7 +616,7 @@ void * capture_thread(void *arg)
             if(traffic_light_flag < 1){
               trafficLightMission(vpe->disp, capt);
             }
-            else if(traffic_light_flag == 1 || traffic_light_flag == 2){
+            else if(traffic_light_flag == 1 || traffic_light_flag == 2 && !check_yellow_line){
               is_yellow_line(vpe->disp, capt);
             }
             break;
@@ -794,11 +803,11 @@ void driving_write_steer()           //주행 중 조향값 쓰기
   }
 }
 
+
 bool is_stop()               // 정지선 인식 함수
 {
   int flag = 0;
   sensor = LineSensor_Read();   // black:1, white:0
-  // printf("LineSensor_Read() = ");
 
   for(i = 0; i < 8; i++){
     if((i % 4) == 0) printf(" ");
@@ -809,9 +818,6 @@ bool is_stop()               // 정지선 인식 함수
     }
     sensor = sensor << 1;
   }
-
-  // printf("\n");
-  // printf("flag : %d\n", flag);
 
   if(flag >= 3){
     printf("LineSensor_Read() = STOP! \n");
@@ -836,12 +842,17 @@ int data_transform(int x, int in_min, int in_max, int out_min, int out_max) // �
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
+float data_transformF(float x, float in_min, float in_max, float out_min, float out_max) // 적외선 센서 데이터 변환 함수
+{
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
 ///////////////////////////////////////////////////////////////////////
 /************************* 1. 출발 *************************************/
 
 bool start_condition()
 {
-  dist = get_distance(4);
+  dist = get_distance(1);
 
   if(start_flag == 0 && dist < 10) start_flag = 1;       // 출발전이고 손을 갖다대면 flag 1로
   else if(start_flag == 1 && dist > 20) start_flag = 2;  // 손을 치웠을 때 flag 2로
@@ -853,32 +864,38 @@ bool start_condition()
 void mode_start()
 {
   printf("START\n");
-  if(start_condition())
+  if(start_condition()){
+    speed = 100; // speed set     --> speed must be set when using position controller
+    DesireSpeed_Write(speed);
     mode++; // 출발하면 고가도로 모드
+
+  }
 }
 
 /************************ 2. 고가도로 & 돌발 내리막 ***********************/
 
 bool overpass_finish()
 {
-  dist_right = get_distance(2);
+  // dist_right = get_distance(2);
   dist_left = get_distance(6);
 
-  if(dist_right > OVERPASS_MAX && dist_left > OVERPASS_MAX)
+  if(dist_left > OVERPASS_MAX)
     return true;
   return false;
 }
 
 void mode_overpass()
 {
-  speed = 100; // speed set     --> speed must be set when using position controller
-  DesireSpeed_Write(speed);
-  printf("OVERPASS\n");
+
+  // printf("OVERPASS\n");
   if(overpass_finish()) overpass_flag = 1; // 고가도로 종료 조건
   if(overpass_flag == 0)      // 고가도로 시작 전 + 주행 중
     tunnel_run();
   else if(overpass_flag == 1) {
     cameraOnOff = 1;
+    DesireSpeed_Write(0);
+    SteeringServoControl_Write(1520);
+    usleep(500000);
     DesireSpeed_Write(80);
     mode++;
   }
@@ -888,7 +905,7 @@ void mode_overpass()
 
 void mode_outbreak()
 {
-  printf("OUTBREAK\n");
+  // printf("OUTBREAK\n");
   printf("red pixel count : %d\n", outbreak_count);
 
   //돌발 장애물 미션 : 최초 인식
@@ -902,7 +919,7 @@ void mode_outbreak()
   else if(outbreak_flag == 1 && outbreak_count < min_outbreak_thrshold) {
     printf("restart!!!\n");
     outbreak_flag = 2;
-    usleep(500000);
+    usleep(1000000);
     speed = 80;
     DesireSpeed_Write(speed);
   }
@@ -915,11 +932,12 @@ void mode_outbreak()
 
 /************************* 4. 주차 *************************************/
 
+
 bool is_parking_area_right()          // 주차공간 판단 (1 : 가까운 벽, 0 : 먼 벽)
 {
   dist = get_distance(3);
-  if(dist < 30) return 1;       // 가까운 벽 인식
-  else if(dist > 50){
+  if(dist < 25) return 1;       // 가까운 벽 인식
+  else if(dist > 40){
     return 0;  // 먼 벽 인식
 
   }
@@ -929,28 +947,32 @@ bool is_parking_area_left()          // 주차공간 판단 (1 : 가까운 벽, 
 {
   dist = get_distance(5);
   if(dist < 30) return 1;       // 가까운 벽 인식
-  else if(dist > 50){
+  else if(dist > 40){
     return 0;  // 먼 벽 인식
 
   }
 }
 
-
-
 void go_backward_right()            // 주차 공간인지 판단 후 후진
 {
-
+  printf("go backward\n");
   SteeringServoControl_Write(1000);
   DesireSpeed_Write(-100);
 
   while(1) {
     dist = get_distance(5);
 
-    if(dist < 40){  //주차공간을 찾아서 오른쪽 조향으로 들어감
+    if(dist < 50 && backward_right_flag == 0){  //주차공간을 찾아서 오른쪽 조향으로 들어감
+      backward_right_flag = 1;
+    }
+    else if(dist < 40 &&backward_right_flag == 2){
       DesireSpeed_Write(0);
       usleep(1000000);
       parking_flag = 4;         // 후진 완료
       break;
+    }
+    else if(dist > 100 && backward_right_flag == 1){
+        backward_right_flag = 2;
     }
   }
 }
@@ -1003,6 +1025,7 @@ bool parking_start_left()        // 주차 모드 판단 (수평 or 수직) -> �
   return 1;                  // 아니면 수직 주차 시작
 }
 
+
 void horizontal_parking_right()       // 수평 주차 모드
 {
   printf("수평 주차 모드 run!!\n");
@@ -1039,7 +1062,9 @@ void horizontal_parking_right()       // 수평 주차 모드
       DesireSpeed_Write(0);
       break;
     }
+
   }
+
 
   //주차 완료 신호
   Alarm_Write(ON);
@@ -1079,8 +1104,7 @@ void horizontal_parking_left()       // 수평 주차 모드
   while(1){
     dist = get_distance(4);
 
-    printf("뒤 %d CM\n" , dist);
-    if(dist < 10 ) {                 // 후방 거리가 10cm 이내이면 주차 완료
+    if(dist < 7 ) {                 // 후방 거리가 10cm 이내이면 주차 완료
       DesireSpeed_Write(0);
       break;
     }
@@ -1091,6 +1115,7 @@ void horizontal_parking_left()       // 수평 주차 모드
   usleep(1000000);
   Alarm_Write(OFF);
 }
+
 void vertical_parking()       // 수직 주차 모드
 {
   printf("수직 주차 모드 run!!\n");
@@ -1170,6 +1195,7 @@ void return_lane_vertical_left()      // 수직 주차 완료 후 차선 복귀
     }
   }
 }
+
 void return_lane_horizontal_right()   // 수평 주차 완료 후 차선 복귀
 {
   SteeringServoControl_Write(2000);
@@ -1229,8 +1255,9 @@ void return_lane_horizontal_left()   // 수평 주차 완료 후 차선 복귀
 bool is_parking_finish_right()
 {
   dist = get_distance(3);
+  int dist1 = get_distance(2);
   printf("debug : %d\n", dist);
-  if(dist > 70) return true;
+  if(dist > 50 && dist1 > 50) return true;
   printf("parking run@@\n");
   return false;
 }
@@ -1243,7 +1270,6 @@ bool is_parking_finish_left()
   printf("parking run@@\n");
   return false;
 }
-
 void mode_parking(){
 
   if(curve_count == 0 && angle < 1050){
@@ -1262,8 +1288,6 @@ void mode_parking(){
     return;
   }
 
-  if(parking_finish == 0) printf("parking_state_11111\n");
-  else printf("parking_state_2222\n");
 
   if(parking_flag == 0 && is_parking_area_right()) {
     printf("첫번째 장애물\n");
@@ -1288,19 +1312,20 @@ void mode_parking(){
       return_lane_horizontal_right(); // 차선복귀모드
     }
     else {                      // 수직주차모드
-      vertical_parking_right();       // 주차모드
+      vertical_parking();       // 주차모드
       return_lane_vertical_right();   // 차선복귀모드
     }
 
     parking_flag = 5;
     DesireSpeed_Write(80);
 
-    while(!is_parking_finish()) {
+    while(!is_parking_finish_right()) {
       driving_write_steer();
     }
     if(!parking_finish) {
       parking_finish = 1;         // 첫번째 주차 완료 표시
       parking_flag = 0;           // 첫번째 주차 완료 후 다시 주차 모드 시작
+      backward_right_flag = 0;
     }
     else {
       parking_flag = -1;          // 두번째 주차 완료 후 모드 변경
@@ -1331,13 +1356,6 @@ bool rotary_finish()
 bool isAnotherCar()
 {
   dist = get_distance(4);
-  // int dist_back = DistanceSensor(4);
-  // int volt_back = data_transform(dist_back, 0, 4095, 0, 5000);
-  //
-  // dist_back = (27.61 / (volt_back - 0.1696)) *1000;
-  // printf("front : %d cm , back : %d cm \n", dist_front, dist_back);
-
-  // drive condition
 
   if(dist <= MIN_DIST) {
     return true;
@@ -1351,7 +1369,7 @@ bool isAnotherCar()
 void mode_rotary()
 {
   // 정지선 인식 = 회전 교차로 시작전
-  printf("ROTARY_MODE !! \n");
+  // printf("ROTARY_MODE !! \n");
   if(rotary_flag == 0){
 
     if(stop_line_flag == 0 && stop_line_count > 300) stop_line_flag = 1;
@@ -1375,19 +1393,16 @@ void mode_rotary()
 
     else if(rotary_enter_count < min_rotary_threshold && rotary_ready_flag == 1){ //차가 지나간 후에 주행 시작
       printf("rotaty_start!!!");
-      CameraYServoControl_Write(1700);
+      CameraYServoControl_Write(1680);
       rotary_flag = 2; // 회전교차로 진입 후
-      speed = 10;
+      speed = 30;
       DesireSpeed_Write(speed);
-    }
-    else if(rotary_ready_flag == 0){
-      printf("rotary_wait!!!\n" );
     }
 
   }
   else if(rotary_flag == 2){      // 회전교차로 진행중
     if(isAnotherCar()) { // 교차로 주행 중 뒤 차 유무 확인 후 속도 upupupup
-      speed = 120;                    // 뒤에 차가 존재할 경우 속도 최대 (곡선기준)
+      speed = 100;                    // 뒤에 차가 존재할 경우 속도 최대 (곡선기준)
       DesireSpeed_Write(speed);
       rotary_flag = 3;
     }
@@ -1396,6 +1411,7 @@ void mode_rotary()
     if(!isAnotherCar()) {   // 뒤에 차 오는지 확인하고 사라지면 교차로 끝내고 터널 모드
       mode++;
       rotary_flag = -1; // 교차로 완료 표시
+      stop_line_flag = 0; //추월 차로에서 다시 쓰기 위해 0으로 초기화
     }
   }
 }
@@ -1412,32 +1428,35 @@ void tunnel_run()
   if(dist_left < 50 && dist_right > 50) { // 왼쪽만 인식할 때
     interval = dist_left;
     interval = data_transform(interval, 0, 20, -500, 500);
-    angle = 1520 + interval;
+    temp_angle = 1520 + interval;
   }
 
   else if(dist_left > 50 && dist_right < 50) { // 오른쪽만 인식할 때
     interval = dist_right;
     interval = data_transform(interval, 0, 20, -500, 500);
-    angle = 1520 - interval;
+    temp_angle = 1520 - interval;
   }
 
   else if(dist_left < 50 && dist_right < 50) {
     interval = dist_right - dist_left;
     interval = data_transform(interval, -20, 20, -500, 500);
-    angle = 1520 - interval;
+    temp_angle = 1520 - interval;
   }
 
-  printf("스티어링 값 : %d \n" , angle);
-  SteeringServoControl_Write(angle);
+  if(temp_angle != angle){
+    angle = temp_angle;
+    SteeringServoControl_Write(angle);
+  }
+
 }
 
 void mode_tunnel()
 {
 
-  printf("MODE TUNNEL !! \n");
+  // printf("MODE TUNNEL !! \n");
   dist_left = get_distance(6);
   dist_right = get_distance(2);
-  printf("left : %d, right : %d \n", dist_left, dist_right);
+  // printf("left : %d, right : %d \n", dist_left, dist_right);
   if((tunnel_flag == 0) && (dist_left < start_tunnel_threshold) && (dist_right < start_tunnel_threshold)) { // 터널 시작
     tunnel_flag = 1;
     speed = 100;
@@ -1446,14 +1465,14 @@ void mode_tunnel()
     printf("tunnel_start!!!!\n");
   }
 
-  else if((tunnel_flag == 1) && (dist_left > finish_tunnel_threshold) && (dist_right > finish_tunnel_threshold)) { // 터널 탈출
+  else if((tunnel_flag == 1) && (dist_left > finish_tunnel_threshold)) { // 터널 탈출
     tunnel_flag = 2;
     printf("tunnel_end!!!\n");
   }
 
   else if(tunnel_flag == 1) {   // 터널 주행 중
     tunnel_run();
-    printf("tunnel_run!!!\n" );
+    // printf("tunnel_run!!!\n" );
   }
 
   else if(tunnel_flag == 2) { // 터널 끝 !
@@ -1462,7 +1481,7 @@ void mode_tunnel()
     DesireSpeed_Write(0);
     usleep(500000);
     DesireSpeed_Write(50);
-    CameraYServoControl_Write(1700);
+    // CameraYServoControl_Write(1700);
   }
 }
 
@@ -1471,15 +1490,22 @@ void mode_tunnel()
 
 int is_passing_lane()
 {
-  dist = get_distance(1);
 
-	if(dist < 40){
-    SteeringServoControl_Write(1520);
-		DesireSpeed_Write(-50);
-		usleep(1500000);
-		return 1;
-	}
-	return 0;
+  if(rotary_enter_count > 300){ //차가 완전히 지나가기 전
+    	DesireSpeed_Write(-50);
+    	usleep(400000);
+    	return 1;
+    }
+    return 0;
+  // dist = get_distance(1);
+  //
+	// if(dist < 40){
+  //   SteeringServoControl_Write(1520);
+	// 	DesireSpeed_Write(-50);
+	// 	usleep(500000);
+	// 	return 1;
+	// }
+	// return 0;
 }
 
 void go_right()
@@ -1495,6 +1521,33 @@ void go_left()
   usleep(2000000);
   passing_lane_flag = 5;
 }
+
+// void return_from_right_lane(){
+//
+//   if(is_return){
+//     DesireSpeed_Write(50);
+//     SteeringServoControl_Write(2000);
+//     usleep(2500000);
+//     SteeringServoControl_Write(1100);
+//     usleep(2500000);
+//     SteeringServoControl_Write(1520);
+//
+//     passing_lane_flag = 6;
+//   }
+// }
+
+// void return_from_left_lane()
+// {
+//   if(is_return){
+//     DesireSpeed_Write(50);
+//     SteeringServoControl_Write(1000);
+//     usleep(2500000);
+//     SteeringServoControl_Write(1900);
+//     usleep(2500000);
+//     SteeringServoControl_Write(1520);
+//     passing_lane_flag = 6;
+//   }
+// }
 
 void return_from_right_lane(){
 
@@ -1519,6 +1572,8 @@ void return_from_left_lane()
     passing_lane_flag = 7;
   }
 }
+
+
 
 void mode_passing_lane()
 {
@@ -1555,6 +1610,7 @@ void mode_passing_lane()
     return_from_left_lane();
   }
   else if (passing_lane_flag == 6 || passing_lane_flag == 7){
+
     if(is_stop()) {
       printf("LineSensor_Read() = STOP! \n");
       speed = 0;
@@ -1562,28 +1618,70 @@ void mode_passing_lane()
       Alarm_Write(ON);
       usleep(1000000);
       Alarm_Write(OFF);
+      CameraYServoControl_Write(1630);
+
       mode ++;
     }
   }
+  // else if(passing_lane_flag == 8){
+  //   if(is_stop()) {
+  //     printf("LineSensor_Read() = STOP! \n");
+  //     DesireSpeed_Write(0);
+  //     Alarm_Write(ON);
+  //     usleep(1000000);
+  //     Alarm_Write(OFF);
+  //     mode ++;
+  //
+  //   }
+  //
+  // }
+  // else if (passing_lane_flag == 6){
+  //
+  //   if(is_stop()) {
+  //     printf("LineSensor_Read() = STOP! \n");
+  //     speed = 0;
+  //     DesireSpeed_Write(speed);
+  //     Alarm_Write(ON);
+  //     usleep(1000000);
+  //     Alarm_Write(OFF);
+  //     CameraYServoControl_Write(1630);
+  //
+  //     mode ++;
+  //   }
+  // }
 }
 
 
 /************************* 8.신호등 **************************/
 
+volatile return_flag = 0;
+
 void left_rotate(){
 
   if(check_yellow_line){
 
-    SteeringServoControl_Write(2000);
+    DesireSpeed_Write(-50);
+
+    float temp = data_transformF(ab[0], -0.11, 0.11,  1500000.0, 0);
+    usleep((int) temp);
+    DesireSpeed_Write(50);
+
+    float steer = data_transformF(ab[0], -0.11, 0.11, 500.0, 300.0);
+
+    SteeringServoControl_Write((int) steer + 1500);
 
     while(1){
       dist = get_distance(3);
 
-      if(dist < 50) break;
+      if(return_flag == 0 && dist < 40) return_flag = 1;
+      else if(return_flag == 1 && dist > 70){
+         break;
+      }
     }
 
-    traffic_light_flag = 4;
-    SteeringServoControl_Write(1900);
+    traffic_light_flag = 3;
+    SteeringServoControl_Write(1520);
+
 
   }
 
@@ -1594,14 +1692,29 @@ void left_rotate(){
 void right_rotate(){
   if(check_yellow_line){
 
-    SteeringServoControl_Write(1000);
+    DesireSpeed_Write(-50);
+
+    float temp = data_transformF(ab[0], -0.11, 0.11,  0.0, 1500000.0);
+
+    usleep((int) temp);
+    DesireSpeed_Write(50);
+
+    float steer = data_transformF(ab[0], -0.11, 0.11, 300.0, 500.0);
+
+    SteeringServoControl_Write((int) 1500 - steer);
+
     while(1){
       dist = get_distance(5);
-      if(dist < 50) break;
+
+      if(return_flag == 0 && dist < 40) return_flag = 1;
+      else if(return_flag == 1 && dist > 70){
+         break;
+      }
     }
 
-    traffic_light_flag = 4;
-    SteeringServoControl_Write(1100);
+    traffic_light_flag = 3;
+    SteeringServoControl_Write(1520);
+
 
   }
 
@@ -1609,28 +1722,27 @@ void right_rotate(){
 
 void mode_traffic_light(){
 
-  printf("flag %d\n", traffic_light_flag);
 
   if(traffic_light_flag < 1){
 
-    printf("red : %d, %d", centerP[0], centerP[1]);
-    printf("yellow : %d, %d", centerP[2], centerP[3]);
-    printf("green : %d, %d", centerP[4], centerP[5]);
+    // printf("red : %d, %d", centerP[0], centerP[1]);
+    // printf("yellow : %d, %d", centerP[2], centerP[3]);
+    // printf("green : %d, %d", centerP[4], centerP[5]);
   }
   else if(traffic_light_flag == 1){
-    speed = 30;
+    speed = 50;
     DesireSpeed_Write(speed);
     left_rotate();
   }
   else if(traffic_light_flag == 2){
-    speed = 30;
+    speed = 50;
     DesireSpeed_Write(speed);
     right_rotate();
   }
-  else if(traffic_light_flag == 4){
+  else if(traffic_light_flag == 3){
     if(is_stop()){
       printf("LineSensor_Read() = STOP! \n");
-      traffic_light_flag = 5;
+      traffic_light_flag = 4;
 
       SteeringServoControl_Write(1520);
       finish_flag = 1; //정지선 인식
@@ -1772,11 +1884,9 @@ int main(int argc, char **argv)
 // 7 	차로 추월 구간
 // 8 	신호등 분기점 코스
 
-  driveOnOff = 1;
   cameraOnOff = 1;
-
+  // driveOnOff = 1;
   while(1){
-
 
     switch(mode) {
       case -1:
@@ -1815,7 +1925,7 @@ int main(int argc, char **argv)
       printf("...finish...\n");
       SteeringServoControl_Write(1520);
 
-      usleep(2000000);
+      usleep(1500000);
       speed = 0;
       DesireSpeed_Write(speed);
       Alarm_Write(ON);
