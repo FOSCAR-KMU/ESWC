@@ -219,7 +219,7 @@ void mode_rotary();
 
 ////////////////////////////터널 변수////////////////////////////////
 
-const int start_tunnel_threshold = 23;
+const int start_tunnel_threshold = 30;
 const int finish_tunnel_threshold = 100;
 
 void tunnel_run();
@@ -1115,7 +1115,13 @@ void mode_parking(){
     }
 
     parking_flag = 5;
-    DesireSpeed_Write(120);
+
+    if (parking_finish){
+      DesireSpeed_Write(40);
+    }
+    else{
+      DesireSpeed_Write(80);
+    }
 
     while(!is_parking_finish_right()) {
       driving_write_steer();
@@ -1126,7 +1132,7 @@ void mode_parking(){
       backward_right_flag = 0;
     }
     else {
-      DesireSpeed_Write(40);
+      // DesireSpeed_Write(30);
       parking_flag = -1;          // 두번째 주차 완료 후 모드 변경
       mode++;
     }
@@ -1207,7 +1213,7 @@ void mode_rotary()
   else if(rotary_flag == 2){      // 회전교차로 진행중
     if(isAnotherCar()) { // 교차로 주행 중 뒤 차 유무 확인 후 속도 upupupup
       //120
-      speed = 160;                    // 뒤에 차가 존재할 경우 속도 최대 (곡선기준)
+      speed = 150;                    // 뒤에 차가 존재할 경우 속도 최대 (곡선기준)
       DesireSpeed_Write(speed);
       rotary_flag = 3;
     }
@@ -1272,7 +1278,7 @@ void mode_tunnel()
   if((tunnel_flag == 0) && (dist_left < start_tunnel_threshold) && (dist_right < start_tunnel_threshold)) { // 터널 시작
     tunnel_flag = 1;
     //150
-    speed = 100;
+    speed = 150;
     DesireSpeed_Write(speed);
     CameraYServoControl_Write(1630);
     printf("tunnel_start!!!!\n");
@@ -1686,7 +1692,7 @@ int main(int argc, char **argv)
 
   PositionControlOnOff_Write(UNCONTROL);
 
-  CarLight_Write(0x01);
+  // CarLight_Write(0x01);
 
 
 
