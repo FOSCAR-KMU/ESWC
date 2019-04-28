@@ -24,9 +24,13 @@
 # Video
 결선 영상
 =======
+https://youtu.be/e8Y6xgQtQc0
+
 [![Video Label](http://img.youtube.com/vi/e8Y6xgQtQc0/0.jpg)](https://youtu.be/e8Y6xgQtQc0) 
 
 개발 완료 동영상
 =======
+https://www.youtube.com/watch?v=PJnkA-6Amxw
+
 [![Video Label](http://img.youtube.com/vi/PJnkA-6Amxw/0.jpg)](https://www.youtube.com/watch?v=PJnkA-6Amxw) 
 
